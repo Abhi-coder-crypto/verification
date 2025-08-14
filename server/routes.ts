@@ -1,27 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { MongoStorage } from "./mongoStorage";
-import { database } from "./database";
 import { insertCandidateSchema } from "@shared/schema";
 import { z } from "zod";
 
-let mongoStorage: MongoStorage | null = null;
-
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize MongoDB connection
-  try {
-    await database.connect();
-    await database.ensureIndexes();
-    mongoStorage = new MongoStorage();
-    console.log('MongoDB storage initialized');
-  } catch (error) {
-    console.error('Failed to initialize MongoDB:', error);
-    console.log('Falling back to in-memory storage');
-  }
-
-  // Use MongoDB if available, otherwise fall back to in-memory storage
-  const activeStorage = mongoStorage || storage;
+  // Use in-memory storage for Replit compatibility
+  const activeStorage = storage;
+  console.log('Using in-memory storage for development');
+  console.log('Loaded', await activeStorage.getAllCandidates(), 'sample candidates');
   // Get all candidates
   app.get("/api/candidates", async (req, res) => {
     try {
