@@ -60,6 +60,7 @@ export interface Candidate {
 - **2025-08-14**: Fixed name extraction to properly identify person names vs address components
 - **2025-08-14**: Improved field detection using top/bottom section analysis for accurate data placement
 - **2025-08-14**: Added better validation and fallback handling for OCR processing
+- **2025-08-14**: Refined name extraction to stop at address keywords and exclude location terms
 - **2024-08-14**: Completed full API integration with React Query for all pages
 - **2024-08-14**: Updated all components to use backend API instead of local context
 - **2024-08-14**: Fixed all TypeScript type issues and LSP diagnostics

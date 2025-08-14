@@ -199,19 +199,21 @@ export class OCRService {
     // Extract name - improved logic to find the actual person's name
     let name = '';
     
-    // First, look for names that appear before common address/location keywords
+    // First, look for names that appear before common address/location keywords - but stop at the keyword
     const nameBeforeAddressPatterns = [
-      /([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,4})(?=\s+(?:KHANNA|COMPOUND|CHAWL|ROAD|STREET|NAGAR|COLONY|PARK|BUILDING|SOCIETY|LANE|VITTHALWADI|ULHASNAGAR|MUMBAI|DELHI|BANGALORE|PUNE|CHENNAI|HYDERABAD))/i,
-      /([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,4})(?=\s+(?:NO\.|Nr\.|NEAR|OPP\.|OPPOSITE))/i
+      /([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})(?=\s+(?:COMPOUND|CHAWL|ROAD|STREET|NAGAR|COLONY|PARK|BUILDING|SOCIETY|LANE|NO\.|Nr\.|NEAR|OPP\.|OPPOSITE|VITTHALWADI|ULHASNAGAR|MUMBAI|DELHI|BANGALORE|PUNE|CHENNAI|HYDERABAD))/i
     ];
 
     for (const pattern of nameBeforeAddressPatterns) {
       const match = fullText.match(pattern);
-      if (match && match[1] && match[1].length >= 8 && match[1].length <= 60) {
-        // Validate it's a proper name (has at least 2 words)
-        const words = match[1].trim().split(/\s+/);
-        if (words.length >= 2 && words.length <= 5) {
-          name = match[1].trim();
+      if (match && match[1]) {
+        const extractedName = match[1].trim();
+        // Validate it's a proper person name (2-4 words, reasonable length)
+        const words = extractedName.split(/\s+/);
+        if (words.length >= 2 && words.length <= 4 && 
+            extractedName.length >= 8 && extractedName.length <= 40 &&
+            !extractedName.match(/KHANNA|COMPOUND|CHAWL|ROAD|STREET|BUILDING/i)) {
+          name = extractedName;
           break;
         }
       }
@@ -249,9 +251,10 @@ export class OCRService {
           continue;
         }
         
-        // Look for proper names (2-4 words, proper case)
+        // Look for proper names (2-4 words, proper case) but exclude address components
         if (line.match(/^[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3}$/) && 
-            line.length >= 8 && line.length <= 50) {
+            line.length >= 8 && line.length <= 50 &&
+            !line.match(/COMPOUND|CHAWL|ROAD|STREET|BUILDING|SOCIETY|NAGAR|COLONY|KHANNA/i)) {
           const words = line.split(/\s+/);
           if (words.length >= 2 && words.length <= 4) {
             name = line;
