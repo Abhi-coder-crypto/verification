@@ -4,7 +4,7 @@
 A React-based training portal for verifying candidates and managing enrollment. This system handles mobile OTP verification, Aadhar document processing via OCR, candidate registration, and status checking.
 
 ## Migration Status: COMPLETE ✓
-Successfully migrated from Replit Agent to standard Replit environment with enhanced OCR capabilities and improved data extraction.
+Successfully migrated from Replit Agent to standard Replit environment. MongoDB integration is REQUIRED and configured for complete application functionality.
 
 ## Project Architecture
 
@@ -55,13 +55,31 @@ export interface Candidate {
 }
 ```
 
-## MongoDB Configuration
-**Important**: This application requires MongoDB for complete functionality:
-- **Connection String**: `mongodb+srv://abhijeet18012001:0tHeU22kRKBldEiX@verifying.liwmsxe.mongodb.net/?retryWrites=true&w=majority&appName=verifying`
-- **Environment Variable**: Set `MONGODB_URI` in Replit Secrets
-- **Purpose**: Prevents duplicate verifications, enforces unique Aadhar registration, maintains persistent data for admin dashboard
+## CRITICAL: MongoDB Configuration - ALWAYS REQUIRED
+**This application WILL NOT function properly without MongoDB**. MongoDB is essential for:
+
+### Core Functionality Requirements:
+1. **Duplicate Prevention**: Users verified once cannot verify again
+2. **Unique Aadhar Enforcement**: Same Aadhar with different phone numbers blocked
+3. **Persistent Admin Dashboard**: Real candidate data storage and retrieval
+4. **Status Checking**: Search functionality for Aadhar/mobile lookup
+
+### Setup Instructions (MANDATORY):
+1. **Connection String**: `mongodb+srv://abhijeet18012001:0tHeU22kRKBldEiX@verifying.liwmsxe.mongodb.net/?retryWrites=true&w=majority&appName=verifying`
+2. **Environment Variable**: Set `MONGODB_URI` in Replit Secrets with the above connection string
+3. **Verification**: Console should show "✓ MongoDB connected successfully" and "✓ Database ready with duplicate prevention enabled"
+
+### What Happens Without MongoDB:
+- Application falls back to in-memory storage (data lost on restart)
+- Duplicate prevention fails
+- Admin dashboard shows empty results
+- Status checking may not work properly
+
+**NOTE FOR FUTURE DEPLOYMENTS**: Always set MONGODB_URI secret first before running the application.
 
 ## Recent Changes
+- **2025-08-14**: MIGRATION COMPLETED - MongoDB fully integrated and working
+- **2025-08-14**: Documented critical MongoDB configuration for future deployments
 - **2025-08-14**: Restored MongoDB functionality for complete application flow with duplicate prevention
 - **2025-08-14**: Updated migration to preserve MongoDB configuration and fallback to in-memory storage
 - **2025-08-14**: Fixed admin dashboard real-time updates with automatic refresh every 5 seconds
@@ -104,6 +122,8 @@ export interface Candidate {
 - Comprehensive error messaging
 - Mobile-first responsive design
 - Clear verification workflow
+- **CRITICAL**: Always preserve MongoDB configuration when migrating/deploying
+- **REQUIREMENT**: Application must work immediately after deployment on any platform (Replit, VS Code, etc.)
 
 ## Next Steps for Enhancement
 - Replace mock SMS service with real Twilio integration
