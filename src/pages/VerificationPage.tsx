@@ -4,6 +4,8 @@ import { Phone, FileText, Shield, Upload, CheckCircle, AlertCircle } from 'lucid
 import { useCandidateContext } from '../context/CandidateContext';
 import { smsService } from '../services/smsService';
 import { otpService } from '../services/otpService';
+import { ocrService } from '../services/ocrService';
+import type { AadharData } from '../services/ocrService';
 
 const VerificationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,12 +23,7 @@ const VerificationPage: React.FC = () => {
   const [canResendOTP, setCanResendOTP] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
-  // Mock Aadhar data that gets filled when document is uploaded
-  const mockAadharData = {
-    name: 'Anjali Mehta',
-    dob: '1996-05-12',
-    aadhar: '987654321098'
-  };
+  const [extractedAadharData, setExtractedAadharData] = useState<AadharData | null>(null);
 
   const handleSendOTP = async () => {
     if (!mobile || mobile.length !== 10) {
@@ -150,7 +147,12 @@ const VerificationPage: React.FC = () => {
   };
 
   const handleProceed = () => {
-    if (isAlreadyTrained(mockAadharData.aadhar, mobile)) {
+    if (!extractedAadharData) {
+      setError('Please upload and verify your Aadhar document first.');
+      return;
+    }
+
+    if (isAlreadyTrained(extractedAadharData.aadhar, mobile)) {
       setError('This candidate is already trained and cannot be registered again.');
       setSuccess('');
       return;
@@ -159,23 +161,35 @@ const VerificationPage: React.FC = () => {
     navigate('/registration');
   };
 
-  const handleAadharUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAadharUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setLoading(true);
     setError('');
+    setSuccess('');
 
-    // Simulate file processing and OCR
-    setTimeout(() => {
-      setAadharUploaded(true);
-      setCurrentCandidate({
-        ...mockAadharData,
-        mobile
-      });
-      setSuccess('Aadhar document processed successfully!');
+    try {
+      // Process the uploaded document
+      const result = await ocrService.processAadharDocument(file);
+      
+      if (result.success && result.data) {
+        setExtractedAadharData(result.data);
+        setAadharUploaded(true);
+        setCurrentCandidate({
+          ...result.data,
+          mobile
+        });
+        setSuccess('Aadhar document processed and verified successfully!');
+      } else {
+        setError(result.error || 'Failed to process Aadhar document. Please try again.');
+      }
+    } catch (error) {
+      setError('An error occurred while processing the document. Please try again.');
+      console.error('Document processing error:', error);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -298,11 +312,19 @@ const VerificationPage: React.FC = () => {
             ) : (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <h4 className="font-semibold text-green-800 mb-2">Document Verified</h4>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Name:</span> {mockAadharData.name}</p>
-                  <p><span className="font-medium">Date of Birth:</span> {new Date(mockAadharData.dob).toLocaleDateString()}</p>
-                  <p><span className="font-medium">Aadhar Number:</span> {mockAadharData.aadhar}</p>
-                </div>
+                {extractedAadharData && (
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-medium">Name:</span> {extractedAadharData.name}</p>
+                    <p><span className="font-medium">Date of Birth:</span> {new Date(extractedAadharData.dob).toLocaleDateString()}</p>
+                    <p><span className="font-medium">Aadhar Number:</span> {extractedAadharData.aadhar}</p>
+                    {extractedAadharData.address && (
+                      <p><span className="font-medium">Address:</span> {extractedAadharData.address}</p>
+                    )}
+                    {extractedAadharData.gender && (
+                      <p><span className="font-medium">Gender:</span> {extractedAadharData.gender}</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
