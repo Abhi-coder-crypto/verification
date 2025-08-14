@@ -17,72 +17,7 @@ export class MemStorage implements IStorage {
   constructor() {
     this.candidates = new Map();
     this.currentId = 1;
-    this.initializeMockData();
-  }
-
-  private initializeMockData() {
-    // Add sample candidates for testing
-    const mockCandidates = [
-      {
-        candidateId: 'TRN001',
-        name: 'Rahul Sharma',
-        dob: '1995-03-15',
-        mobile: '9876543210',
-        aadhar: '123456789012',
-        address: 'Delhi, India',
-        program: 'Category 1',
-        center: 'Delhi Training Center',
-        trainer: 'Mr. Rajesh Kumar',
-        duration: '3 months',
-        trained: true,
-        status: 'Completed'
-      },
-      {
-        candidateId: 'TRN002',
-        name: 'Priya Singh',
-        dob: '1998-07-20',
-        mobile: '9123456780',
-        aadhar: '234567890123',
-        address: 'Mumbai, India',
-        program: 'Category 2',
-        center: 'Mumbai Training Center',
-        trainer: 'Ms. Sunita Verma',
-        duration: '4 months',
-        trained: true,
-        status: 'Completed'
-      },
-      {
-        candidateId: 'TRN003',
-        name: 'Amit Patel',
-        dob: '1992-11-08',
-        mobile: '9234567890',
-        aadhar: '345678901234',
-        address: 'Bangalore, India',
-        program: 'Category 3',
-        center: 'Bangalore Training Center',
-        trainer: 'Mr. Arjun Reddy',
-        duration: '6 months',
-        trained: false,
-        status: 'Enrolled'
-      }
-    ];
-
-    mockCandidates.forEach(candidate => {
-      const id = this.currentId++;
-      const fullCandidate: Candidate = { 
-        ...candidate, 
-        id, 
-        createdAt: new Date(),
-        address: candidate.address ?? null,
-        program: candidate.program ?? null,
-        center: candidate.center ?? null,
-        trainer: candidate.trainer ?? null,
-        duration: candidate.duration ?? null,
-        trained: candidate.trained ?? false,
-        status: candidate.status ?? 'Not Enrolled'
-      };
-      this.candidates.set(id, fullCandidate);
-    });
+    // No mock data - start with empty database
   }
 
   async getCandidate(id: number): Promise<Candidate | undefined> {

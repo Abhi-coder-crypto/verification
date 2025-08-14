@@ -1,14 +1,33 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { MongoStorage } from "./mongoStorage";
+import { database } from "./database";
 import { insertCandidateSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Use in-memory storage for Replit compatibility
-  const activeStorage = storage;
-  console.log('Using in-memory storage for development');
-  console.log('Loaded', await activeStorage.getAllCandidates(), 'sample candidates');
+  let activeStorage;
+  let mongoStorage: MongoStorage | null = null;
+
+  // Try to initialize MongoDB connection
+  try {
+    if (process.env.MONGODB_URI) {
+      await database.connect();
+      await database.ensureIndexes();
+      mongoStorage = new MongoStorage();
+      activeStorage = mongoStorage;
+      console.log('✓ MongoDB connected successfully');
+      console.log('✓ Database cleared and ready for new registrations');
+    } else {
+      console.log('⚠️ MONGODB_URI not provided, please set it in secrets');
+      throw new Error('MongoDB URI required');
+    }
+  } catch (error) {
+    console.error('❌ Failed to connect to MongoDB:', error);
+    console.log('Please provide MONGODB_URI in secrets to store data permanently');
+    throw error;
+  }
   // Get all candidates
   app.get("/api/candidates", async (req, res) => {
     try {
