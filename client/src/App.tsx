@@ -4,6 +4,7 @@ import Navigation from './components/Navigation';
 import VerificationPage from './pages/VerificationPage';
 import RegistrationPage from './pages/RegistrationPage';
 import StatusPage from './pages/StatusPage';
+import AdminPage from './pages/AdminPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/verification" component={VerificationPage} />
           <Route path="/registration" component={RegistrationPage} />
           <Route path="/status" component={StatusPage} />
+          <Route path="/admin" component={AdminPage} />
         </main>
       </div>
     </CandidateProvider>
