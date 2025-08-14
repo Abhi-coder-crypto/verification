@@ -17,15 +17,24 @@ const AdminPage = () => {
   const { data: candidates = [], isLoading, error: queryError } = useQuery<Candidate[]>({
     queryKey: ['/api/candidates'],
     enabled: isLoggedIn,
-    retry: false
+    retry: false,
+    refetchOnMount: true,
+    staleTime: 0
   });
 
   // Initialize search results with all candidates when data is loaded
   useEffect(() => {
-    if (candidates.length > 0 && searchResults.length === 0) {
+    if (candidates.length > 0) {
       setSearchResults(candidates);
     }
-  }, [candidates, searchResults.length]);
+  }, [candidates]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Admin Dashboard - Candidates loaded:', candidates.length);
+    console.log('Admin Dashboard - Query error:', queryError);
+    console.log('Admin Dashboard - Is loading:', isLoading);
+  }, [candidates, queryError, isLoading]);
 
   // Search mutation for individual candidates
   const searchMutation = useMutation({
