@@ -5,7 +5,7 @@ export interface IStorage {
   getCandidateById(candidateId: string): Promise<Candidate | undefined>;
   getCandidateByAadhar(aadhar: string): Promise<Candidate | undefined>;
   getCandidateByMobile(mobile: string): Promise<Candidate | undefined>;
-  createCandidate(candidate: InsertCandidate): Promise<Candidate>;
+  createCandidate(candidate: InsertCandidate, candidateId: string): Promise<Candidate>;
   updateCandidate(id: number, updates: Partial<InsertCandidate>): Promise<Candidate | undefined>;
   getAllCandidates(): Promise<Candidate[]>;
 }
@@ -22,7 +22,7 @@ export class MemStorage implements IStorage {
 
   private initializeMockData() {
     // Add sample candidates for testing
-    const mockCandidates: InsertCandidate[] = [
+    const mockCandidates = [
       {
         candidateId: 'TRN001',
         name: 'Rahul Sharma',
@@ -107,10 +107,11 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async createCandidate(insertCandidate: InsertCandidate): Promise<Candidate> {
+  async createCandidate(insertCandidate: InsertCandidate, candidateId: string): Promise<Candidate> {
     const id = this.currentId++;
     const candidate: Candidate = { 
-      ...insertCandidate, 
+      ...insertCandidate,
+      candidateId,
       id, 
       createdAt: new Date(),
       address: insertCandidate.address ?? null,

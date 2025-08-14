@@ -21,6 +21,7 @@ export const candidates = pgTable("candidates", {
 
 export const insertCandidateSchema = createInsertSchema(candidates).omit({
   id: true,
+  candidateId: true,
   createdAt: true,
 });
 

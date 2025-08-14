@@ -61,6 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new candidate
   app.post("/api/candidates", async (req, res) => {
     try {
+      console.log("Received candidate data:", req.body);
       const validatedData = insertCandidateSchema.parse(req.body);
       
       // Check if candidate already exists
@@ -72,13 +73,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate unique candidate ID
       const candidateId = `TRN${String(Date.now()).slice(-6)}`;
       
-      const candidate = await storage.createCandidate({
-        ...validatedData,
-        candidateId
-      });
+      const candidate = await storage.createCandidate(validatedData, candidateId);
 
       res.status(201).json(candidate);
     } catch (error) {
+      console.error("Validation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
           error: "Invalid candidate data", 

@@ -77,6 +77,7 @@ const RegistrationPage = () => {
   // Registration mutation
   const registerMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      console.log('Sending registration data:', data);
       return await apiRequest('/api/candidates', {
         method: 'POST',
         body: JSON.stringify({
