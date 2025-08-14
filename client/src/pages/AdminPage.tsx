@@ -20,7 +20,7 @@ const AdminPage = () => {
     retry: false,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: isLoggedIn ? 5000 : false, // Only refresh when logged in
     staleTime: 0, // Always consider data stale
     gcTime: 0 // Don't cache data
   });
@@ -32,22 +32,7 @@ const AdminPage = () => {
     }
   }, [candidates]);
 
-  // Auto-refresh data every 10 seconds when logged in
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isLoggedIn) {
-      interval = setInterval(() => {
-        refetch();
-      }, 10000);
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isLoggedIn, refetch]);
+  // Note: Auto-refresh is handled by React Query's refetchInterval
 
   // Debug logging
   useEffect(() => {
