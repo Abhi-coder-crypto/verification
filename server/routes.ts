@@ -1,14 +1,31 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { MongoStorage } from "./mongoStorage";
+import { database } from "./database";
 import { insertCandidateSchema } from "@shared/schema";
 import { z } from "zod";
 
+let mongoStorage: MongoStorage | null = null;
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize MongoDB connection
+  try {
+    await database.connect();
+    await database.ensureIndexes();
+    mongoStorage = new MongoStorage();
+    console.log('MongoDB storage initialized');
+  } catch (error) {
+    console.error('Failed to initialize MongoDB:', error);
+    console.log('Falling back to in-memory storage');
+  }
+
+  // Use MongoDB if available, otherwise fall back to in-memory storage
+  const activeStorage = mongoStorage || storage;
   // Get all candidates
   app.get("/api/candidates", async (req, res) => {
     try {
-      const candidates = await storage.getAllCandidates();
+      const candidates = await activeStorage.getAllCandidates();
       res.json(candidates);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch candidates" });
@@ -23,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid candidate ID" });
       }
 
-      const candidate = await storage.getCandidate(id);
+      const candidate = await activeStorage.getCandidate(id);
       if (!candidate) {
         return res.status(404).json({ error: "Candidate not found" });
       }
@@ -41,9 +58,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let candidate;
       if (aadhar) {
-        candidate = await storage.getCandidateByAadhar(aadhar);
+        candidate = await activeStorage.getCandidateByAadhar(aadhar);
       } else if (mobile) {
-        candidate = await storage.getCandidateByMobile(mobile);
+        candidate = await activeStorage.getCandidateByMobile(mobile);
       } else {
         return res.status(400).json({ error: "Either aadhar or mobile is required" });
       }
@@ -65,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCandidateSchema.parse(req.body);
       
       // Check if candidate already exists
-      const existingCandidate = await storage.getCandidateByAadhar(validatedData.aadhar);
+      const existingCandidate = await activeStorage.getCandidateByAadhar(validatedData.aadhar);
       if (existingCandidate) {
         return res.status(409).json({ error: "Candidate with this Aadhar already exists" });
       }
@@ -73,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate unique candidate ID
       const candidateId = `TRN${String(Date.now()).slice(-6)}`;
       
-      const candidate = await storage.createCandidate(validatedData, candidateId);
+      const candidate = await activeStorage.createCandidate(validatedData, candidateId);
 
       res.status(201).json(candidate);
     } catch (error) {
@@ -97,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
-      const candidate = await storage.updateCandidate(id, updates);
+      const candidate = await activeStorage.updateCandidate(id, updates);
 
       if (!candidate) {
         return res.status(404).json({ error: "Candidate not found" });

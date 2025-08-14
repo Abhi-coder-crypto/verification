@@ -16,7 +16,8 @@ Successfully migrated from Replit Agent to standard Replit environment with enha
 
 ### Backend (Express + TypeScript)
 - **API**: RESTful endpoints for candidate management
-- **Storage**: In-memory storage with mock data (production ready for database)
+- **Storage**: MongoDB database with fallback to in-memory storage
+- **Database**: MongoDB integration with unique indexes and collections
 - **Validation**: Zod schemas for type-safe API requests
 
 ### Key Features
@@ -62,6 +63,7 @@ export interface Candidate {
 - **2025-08-14**: Added better validation and fallback handling for OCR processing
 - **2025-08-14**: Refined name extraction to stop at address keywords and exclude location terms
 - **2025-08-14**: Created universal OCR name extraction with comprehensive location keyword filtering
+- **2025-08-14**: Integrated MongoDB database for persistent candidate storage with fallback mechanism
 - **2024-08-14**: Completed full API integration with React Query for all pages
 - **2024-08-14**: Updated all components to use backend API instead of local context
 - **2024-08-14**: Fixed all TypeScript type issues and LSP diagnostics
