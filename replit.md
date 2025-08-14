@@ -57,6 +57,7 @@ export interface Candidate {
 
 ## Recent Changes
 - **2025-08-14**: Successfully completed migration from Replit Agent to standard Replit environment
+- **2025-08-14**: Enhanced registration validation to prevent duplicate mobile number registration
 - **2025-08-14**: Enhanced OCR service with improved Aadhar card data extraction
 - **2025-08-14**: Fixed name extraction to properly identify person names vs address components
 - **2025-08-14**: Improved field detection using top/bottom section analysis for accurate data placement
@@ -81,7 +82,7 @@ export interface Candidate {
 
 ## Security Features
 - Input validation with Zod schemas
-- Duplicate prevention (by Aadhar number)
+- Duplicate prevention (by Aadhar number and mobile number)
 - Client/server data separation
 - Type-safe API interactions
 

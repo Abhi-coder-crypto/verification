@@ -68,10 +68,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Received candidate data:", req.body);
       const validatedData = insertCandidateSchema.parse(req.body);
       
-      // Check if candidate already exists
-      const existingCandidate = await activeStorage.getCandidateByAadhar(validatedData.aadhar);
-      if (existingCandidate) {
+      // Check if candidate already exists by Aadhar
+      const existingCandidateByAadhar = await activeStorage.getCandidateByAadhar(validatedData.aadhar);
+      if (existingCandidateByAadhar) {
         return res.status(409).json({ error: "Candidate with this Aadhar already exists" });
+      }
+
+      // Check if candidate already exists by mobile number
+      const existingCandidateByMobile = await activeStorage.getCandidateByMobile(validatedData.mobile);
+      if (existingCandidateByMobile) {
+        return res.status(409).json({ error: "Candidate with this mobile number already exists" });
       }
 
       // Generate unique candidate ID
