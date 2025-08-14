@@ -13,33 +13,25 @@ const AdminPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Candidate[]>([]);
 
-  // Fetch all candidates when logged in with auto-refresh
+  // Fetch all candidates when logged in
   const { data: candidates = [], isLoading, error: queryError, refetch } = useQuery<Candidate[]>({
     queryKey: ['/api/candidates'],
     enabled: isLoggedIn,
-    retry: false,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    refetchInterval: isLoggedIn ? 5000 : false, // Only refresh when logged in
-    staleTime: 0, // Always consider data stale
-    gcTime: 0 // Don't cache data
+    refetchInterval: isLoggedIn ? 5000 : false,
+    staleTime: 0,
+    gcTime: 0
   });
 
-  // Initialize search results with all candidates when data is loaded
+  // Set search results when candidates change (but avoid infinite loop)
   useEffect(() => {
-    console.log('Setting search results, candidates count:', candidates.length);
-    setSearchResults(candidates);
-  }, [candidates]);
-
-  // Note: Auto-refresh is handled by React Query's refetchInterval
-
-  // Debug logging
-  useEffect(() => {
-    console.log('Admin Dashboard - Candidates loaded:', candidates.length);
-    console.log('Admin Dashboard - Raw candidates data:', candidates);
-    console.log('Admin Dashboard - Query error:', queryError);
-    console.log('Admin Dashboard - Is loading:', isLoading);
-  }, [candidates, queryError, isLoading]);
+    if (isLoggedIn && candidates) {
+      console.log('Admin Dashboard - Candidates loaded:', candidates.length);
+      console.log('Admin Dashboard - Raw candidates data:', candidates);
+      setSearchResults(candidates);
+    }
+  }, [candidates, isLoggedIn]);
 
   // Search mutation for individual candidates
   const searchMutation = useMutation({
@@ -57,7 +49,7 @@ const AdminPage = () => {
     }
   });
 
-  // Admin credentials (in production, this would be handled securely)
+  // Admin credentials
   const ADMIN_USERNAME = 'admin';
   const ADMIN_PASSWORD = 'admin123';
 
@@ -90,23 +82,15 @@ const AdminPage = () => {
         candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         candidate.aadhar.includes(searchTerm) ||
         candidate.mobile.includes(searchTerm) ||
-        candidate.candidateId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        candidate.program?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        candidate.center?.toLowerCase().includes(searchTerm.toLowerCase())
+        (candidate.candidateId && candidate.candidateId.toLowerCase().includes(searchTerm.toLowerCase()))
       );
       setSearchResults(results);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Completed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Enrolled':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const handleReset = () => {
+    setSearchTerm('');
+    setSearchResults(candidates);
   };
 
   const exportData = () => {
@@ -160,7 +144,6 @@ const AdminPage = () => {
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   placeholder="Enter username"
                   required
-                  data-testid="input-username"
                 />
               </div>
             </div>
@@ -178,13 +161,11 @@ const AdminPage = () => {
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   placeholder="Enter password"
                   required
-                  data-testid="input-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  data-testid="button-toggle-password"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -200,7 +181,6 @@ const AdminPage = () => {
             <button
               type="submit"
               className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-              data-testid="button-login"
             >
               <LogIn className="w-5 h-5 mr-2 inline" />
               Login
@@ -237,7 +217,6 @@ const AdminPage = () => {
             <button
               onClick={exportData}
               className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-              data-testid="button-export"
             >
               <Download className="w-4 h-4 mr-2 inline" />
               Export CSV
@@ -245,7 +224,6 @@ const AdminPage = () => {
             <button
               onClick={() => setIsLoggedIn(false)}
               className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-              data-testid="button-logout"
             >
               Logout
             </button>
@@ -299,57 +277,42 @@ const AdminPage = () => {
         </div>
 
         {/* Search */}
-        <div className="bg-gray-50 rounded-lg p-6 mb-8">
-          <form onSubmit={handleSearch} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search Filter
-                </label>
-                <select
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  data-testid="select-filter"
-                >
-                  <option value="all">All Fields</option>
-                  <option value="aadhar">Aadhar Number</option>
-                  <option value="mobile">Mobile Number</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search Term
-                </label>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search candidates..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  data-testid="input-search"
-                />
-              </div>
+        <div className="mb-8">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Filter</label>
+              <select
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Fields</option>
+                <option value="aadhar">Aadhar Number</option>
+                <option value="mobile">Mobile Number</option>
+              </select>
             </div>
-
-            <div className="flex space-x-4">
+            <div className="flex-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Term</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Enter search term..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex space-x-2 items-end">
               <button
                 type="submit"
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-                data-testid="button-search"
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200"
               >
-                <Search className="w-5 h-5 mr-2 inline" />
+                <Search className="w-4 h-4 mr-2 inline" />
                 Search
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSearchResults(candidates);
-                }}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-                data-testid="button-reset"
+                onClick={handleReset}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200"
               >
                 Reset
               </button>
@@ -357,51 +320,94 @@ const AdminPage = () => {
           </form>
         </div>
 
-        {/* Results Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left p-4 font-semibold text-gray-700">Candidate ID</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Name</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Mobile</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Aadhar</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Program</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Status</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {searchResults.map((candidate) => (
-                <tr key={candidate.id} className="border-b border-gray-200 hover:bg-gray-50" data-testid={`row-candidate-${candidate.id}`}>
-                  <td className="p-4 font-mono text-blue-600" data-testid={`text-candidate-id-${candidate.id}`}>
-                    {candidate.id || 'N/A'}
-                  </td>
-                  <td className="p-4 font-medium" data-testid={`text-name-${candidate.id}`}>{candidate.name}</td>
-                  <td className="p-4" data-testid={`text-mobile-${candidate.id}`}>{candidate.mobile}</td>
-                  <td className="p-4 font-mono" data-testid={`text-aadhar-${candidate.id}`}>
-                    {candidate.aadhar.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3')}
-                  </td>
-                  <td className="p-4" data-testid={`text-program-${candidate.id}`}>{candidate.program || 'Not Assigned'}</td>
-                  <td className="p-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(candidate.status)}`} data-testid={`status-${candidate.id}`}>
-                      {candidate.status}
-                    </span>
-                  </td>
-                  <td className="p-4 text-gray-600" data-testid={`text-created-${candidate.id}`}>
-                    {candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : 'N/A'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Loading state */}
+        {isLoading && (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-gray-600">Loading candidates...</p>
+          </div>
+        )}
 
-          {searchResults.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No candidates found matching your search criteria.
-            </div>
-          )}
-        </div>
+        {/* Error state */}
+        {queryError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            Error loading candidates: {queryError.message}
+          </div>
+        )}
+
+        {/* Results Table */}
+        {!isLoading && !queryError && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Candidate ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Mobile
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Aadhar
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Program
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {searchResults.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                      No candidates found matching your search criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  searchResults.map((candidate) => (
+                    <tr key={candidate.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {candidate.candidateId}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {candidate.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {candidate.mobile}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {candidate.aadhar.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {candidate.program || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          candidate.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                          candidate.status === 'Enrolled' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {candidate.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : '-'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
