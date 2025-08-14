@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, FileText, Shield, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCandidateContext } from '../context/CandidateContext';
+import { smsService } from '../services/smsService';
+import { otpService } from '../services/otpService';
 
 const VerificationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +17,9 @@ const VerificationPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [otpAttempts, setOtpAttempts] = useState(0);
+  const [canResendOTP, setCanResendOTP] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
   // Mock Aadhar data that gets filled when document is uploaded
   const mockAadharData = {
@@ -23,7 +28,7 @@ const VerificationPage: React.FC = () => {
     aadhar: '987654321098'
   };
 
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (!mobile || mobile.length !== 10) {
       setError('Please enter a valid 10-digit mobile number');
       return;
@@ -31,24 +36,126 @@ const VerificationPage: React.FC = () => {
     
     setLoading(true);
     setError('');
+    setSuccess('');
     
-    // Simulate API call
-    setTimeout(() => {
-      setOtpSent(true);
-      setSuccess('OTP sent successfully! Use 1234 for demo.');
+    try {
+      // Generate OTP
+      const generatedOTP = otpService.generateOTP();
+      
+      // Send SMS
+      const smsResponse = await smsService.sendOTP(mobile, generatedOTP);
+      
+      if (smsResponse.success) {
+        // Store OTP for validation
+        otpService.storeOTP(mobile, generatedOTP);
+        
+        setOtpSent(true);
+        setSuccess(smsResponse.message);
+        
+        // Start resend timer (30 seconds)
+        setCanResendOTP(false);
+        setResendTimer(30);
+        
+        const timer = setInterval(() => {
+          setResendTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              setCanResendOTP(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setError(smsResponse.message);
+      }
+    } catch (error) {
+      setError('Failed to send OTP. Please try again.');
+      console.error('OTP sending error:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (!canResendOTP) return;
+    
+    // Clear previous OTP
+    otpService.clearOTP(mobile);
+    setOtp('');
+    setError('');
+    
+    await handleSendOTP();
   };
 
   const handleVerifyOTP = () => {
-    if (otp !== '1234') {
-      setError('Invalid OTP. Use 1234 for demo.');
+    if (!otp || otp.length !== 4) {
+      setError('Please enter a valid 4-digit OTP');
       return;
     }
     
-    setOtpVerified(true);
-    setSuccess('Mobile number verified successfully!');
     setError('');
+    
+    const validation = otpService.validateOTP(mobile, otp);
+    
+    if (validation.valid) {
+      setOtpSent(true);
+      setOtpVerified(true);
+      setSuccess(validation.message);
+      setOtpAttempts(0);
+    } else {
+      setError(validation.message);
+      if (validation.attemptsLeft !== undefined) {
+        setOtpAttempts(3 - validation.attemptsLeft);
+      }
+      
+      // If max attempts exceeded, allow resending
+      if (validation.message.includes('Maximum attempts exceeded')) {
+        setOtpSent(false);
+        setCanResendOTP(true);
+        setResendTimer(0);
+      }
+    }
+  };
+
+  const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+    if (value.length <= 10) {
+      setMobile(value);
+      
+      // Reset OTP state if mobile number changes
+      if (otpSent && value !== mobile) {
+        setOtpSent(false);
+        setOtpVerified(false);
+        setOtp('');
+        otpService.clearOTP(mobile);
+      }
+    }
+  };
+
+  const handleOTPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+    if (value.length <= 4) {
+      setOtp(value);
+      setError(''); // Clear error when user starts typing
+    }
+  };
+
+  const formatPhoneDisplay = (phone: string) => {
+    if (phone.length >= 10) {
+      return `+91 ${phone.slice(0, 5)} ${phone.slice(5)}`;
+    }
+    return phone;
+  };
+
+  const handleProceed = () => {
+    if (isAlreadyTrained(mockAadharData.aadhar, mobile)) {
+      setError('This candidate is already trained and cannot be registered again.');
+      setSuccess('');
+      return;
+    }
+
+    navigate('/registration');
   };
 
   const handleAadharUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,16 +175,6 @@ const VerificationPage: React.FC = () => {
       setSuccess('Aadhar document processed successfully!');
       setLoading(false);
     }, 2000);
-  };
-
-  const handleProceed = () => {
-    if (isAlreadyTrained(mockAadharData.aadhar, mobile)) {
-      setError('Candidate is already trained!');
-      setSuccess('');
-      return;
-    }
-
-    navigate('/registration');
   };
 
   return (
@@ -107,7 +204,7 @@ const VerificationPage: React.FC = () => {
               <input
                 type="tel"
                 value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
+                onChange={handleMobileChange}
                 placeholder="Enter 10-digit mobile number"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                 maxLength={10}
@@ -127,26 +224,43 @@ const VerificationPage: React.FC = () => {
 
             {otpSent && !otpVerified && (
               <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-700">
+                    OTP sent to <span className="font-semibold">{formatPhoneDisplay(mobile)}</span>
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Valid for 5 minutes • Attempts: {otpAttempts}/3
+                  </p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Enter OTP (Demo: 1234)
+                    Enter OTP
                   </label>
                   <input
                     type="text"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
+                    onChange={handleOTPChange}
                     placeholder="Enter 4-digit OTP"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                     maxLength={4}
                   />
                 </div>
-                <button
-                  onClick={handleVerifyOTP}
-                  disabled={!otp || otp.length !== 4}
-                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Verify OTP
-                </button>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={handleVerifyOTP}
+                    disabled={!otp || otp.length !== 4}
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Verify OTP
+                  </button>
+                  <button
+                    onClick={handleResendOTP}
+                    disabled={!canResendOTP || loading}
+                    className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
