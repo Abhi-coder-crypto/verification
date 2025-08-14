@@ -195,54 +195,80 @@ export class OCRService {
       if (aadharNumber) break;
     }
 
-    // Extract name - improved logic to find the actual person's name
+    // Extract name - universal logic for any Aadhar card
     let name = '';
     
-    // Strategy 1: Look for complete names before address markers - more precise patterns
-    const nameBeforeLocationPatterns = [
-      // Match exactly "Abhijeet Rajesh Singh" before "KHANNA" (most specific)
-      /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?=\s+KHANNA(?:\s|$))/i,
-      // Match name that ends before any address component
-      /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?=\s+(?:COMPOUND|CHAWL|ROAD|STREET|BUILDING|NO\.))/i,
-      // Match common Indian name pattern before location
-      /([A-Z][a-z]+\s+[A-Z][a-z]+\s+[A-Z][a-z]+)(?=\s+[A-Z]{2,})/i
+    // Define comprehensive address/location keywords that typically follow names
+    const locationKeywords = [
+      // Building/Structure types
+      'COMPOUND', 'CHAWL', 'BUILDING', 'SOCIETY', 'COMPLEX', 'TOWER', 'PLAZA', 'APARTMENT',
+      // Road/Street types  
+      'ROAD', 'STREET', 'LANE', 'MARG', 'PATH', 'GALI', 'CROSS',
+      // Area types
+      'NAGAR', 'COLONY', 'PARK', 'GARDEN', 'SECTOR', 'BLOCK', 'PLOT', 'WARD',
+      // Common location names/identifiers
+      'NO', 'NUMBER', 'FLAT', 'ROOM', 'FLOOR', 'WING', 'PHASE',
+      // Directional/Position words
+      'NEAR', 'OPP', 'OPPOSITE', 'BEHIND', 'FRONT', 'SIDE',
+      // City/District indicators
+      'DIST', 'DISTRICT', 'TALUKA', 'TEHSIL', 'VILLAGE', 'CITY', 'TOWN'
     ];
-
-    for (const pattern of nameBeforeLocationPatterns) {
-      const match = fullText.match(pattern);
-      if (match && match[1]) {
-        const candidateName = match[1].trim();
-        // Ensure it doesn't contain any address keywords
-        if (candidateName.length >= 8 && candidateName.length <= 45 &&
-            !candidateName.match(/KHANNA|COMPOUND|CHAWL|ROAD|STREET|BUILDING|SOCIETY|LANE|BLOCK|PLOT/i)) {
-          const words = candidateName.split(/\s+/);
-          if (words.length >= 2 && words.length <= 4) {
-            name = candidateName;
-            break;
-          }
+    
+    // Create a comprehensive pattern to match names before any location keyword
+    const locationPattern = new RegExp(`([A-Z][a-zA-Z]+(?:\\s+[A-Z][a-zA-Z]+){1,4})(?=\\s+(?:${locationKeywords.join('|')}))`, 'i');
+    
+    // Strategy 1: Find name that appears before any location/address keyword
+    const nameMatch = fullText.match(locationPattern);
+    if (nameMatch && nameMatch[1]) {
+      const candidateName = nameMatch[1].trim();
+      const words = candidateName.split(/\s+/);
+      
+      // Validate it's a reasonable person name (2-5 words, proper length)
+      if (words.length >= 2 && words.length <= 5 && 
+          candidateName.length >= 6 && candidateName.length <= 50) {
+        
+        // Final check: ensure no location keywords accidentally included
+        const cleanWords = words.filter(word => 
+          !locationKeywords.some(keyword => 
+            word.toUpperCase() === keyword || word.toUpperCase().includes(keyword)
+          )
+        );
+        
+        if (cleanWords.length >= 2) {
+          name = cleanWords.join(' ');
         }
       }
     }
 
-    // Strategy 2: Look for structured name patterns in specific contexts
+    // Strategy 2: Look for names in structured contexts if Strategy 1 failed
     if (!name) {
       const contextualNamePatterns = [
         // Name before parent reference (S/O, D/O, W/O)
-        /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?=\s*(?:S\/O|D\/O|W\/O|Son of|Daughter of))/i,
+        /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,4})(?=\s*(?:S\/O|D\/O|W\/O|Son of|Daughter of))/i,
         // Name before DOB context
-        /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?=\s*(?:DOB|Date of Birth|जन्म))/i,
+        /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,4})(?=\s*(?:DOB|Date of Birth|जन्म))/i,
         // Name in gender context (gender followed by name)
-        /(?:Male|Female|पुरुष|महिला)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})/i
+        /(?:Male|Female|पुरुष|महिला)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,4})/i
       ];
 
       for (const pattern of contextualNamePatterns) {
         const match = fullText.match(pattern);
         if (match && match[1]) {
           const candidateName = match[1].trim();
-          if (candidateName.length >= 6 && candidateName.length <= 45) {
-            const words = candidateName.split(/\s+/);
-            if (words.length >= 2 && words.length <= 4) {
-              name = candidateName;
+          const words = candidateName.split(/\s+/);
+          
+          if (words.length >= 2 && words.length <= 5 && 
+              candidateName.length >= 6 && candidateName.length <= 50) {
+            
+            // Clean any location words that might have been captured
+            const cleanWords = words.filter(word => 
+              !locationKeywords.some(keyword => 
+                word.toUpperCase() === keyword || word.toUpperCase().includes(keyword)
+              )
+            );
+            
+            if (cleanWords.length >= 2) {
+              name = cleanWords.join(' ');
               break;
             }
           }
@@ -250,7 +276,7 @@ export class OCRService {
       }
     }
 
-    // Strategy 3: Find probable names in early lines, with improved filtering
+    // Strategy 3: Find probable names in early lines as fallback
     if (!name) {
       const probableNameLines = lines.slice(0, Math.min(8, midPoint));
       
@@ -260,28 +286,26 @@ export class OCRService {
           continue;
         }
         
-        // Look for lines that look like names (proper case, 2-4 words)
-        const nameMatch = line.match(/^([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?:\s|$)/);
+        // Look for lines that look like names (proper case, 2-5 words)
+        const nameMatch = line.match(/^([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,4})(?:\s|$)/);
         if (nameMatch && nameMatch[1]) {
           const candidateName = nameMatch[1].trim();
+          const words = candidateName.split(/\s+/);
           
-          // Validate it's likely a person's name and clean it
-          if (candidateName.length >= 8 && candidateName.length <= 45) {
-            const words = candidateName.split(/\s+/);
+          // Validate it's likely a person's name
+          if (words.length >= 2 && words.length <= 5 && 
+              candidateName.length >= 6 && candidateName.length <= 50) {
             
-            // Check it's a reasonable name pattern and not obviously address/location
-            if (words.length >= 2 && words.length <= 4 && 
-                !candidateName.match(/KHANNA|COMPOUND|CHAWL|ROAD|STREET|BUILDING|SOCIETY|NAGAR|COLONY|LANE|BLOCK|PLOT/i)) {
-              
-              // Additional cleaning: if the name accidentally includes location words at the end, remove them
-              const cleanWords = words.filter(word => 
-                !word.match(/^(KHANNA|COMPOUND|CHAWL|ROAD|STREET|BUILDING|SOCIETY|NAGAR|COLONY|LANE|BLOCK|PLOT)$/i)
-              );
-              
-              if (cleanWords.length >= 2) {
-                name = cleanWords.join(' ');
-                break;
-              }
+            // Clean any location words using our comprehensive list
+            const cleanWords = words.filter(word => 
+              !locationKeywords.some(keyword => 
+                word.toUpperCase() === keyword || word.toUpperCase().includes(keyword)
+              )
+            );
+            
+            if (cleanWords.length >= 2) {
+              name = cleanWords.join(' ');
+              break;
             }
           }
         }
