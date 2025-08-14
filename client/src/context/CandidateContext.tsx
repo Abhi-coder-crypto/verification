@@ -77,8 +77,21 @@ export const CandidateProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [currentCandidate, setCurrentCandidate] = useState<Partial<Candidate>>({});
 
   const addCandidate = (candidate: Candidate): string => {
+    // Check for duplicates before adding
+    const existingByAadhar = findCandidate(candidate.aadhar, '');
+    const existingByMobile = findCandidate('', candidate.mobile);
+    
+    if (existingByAadhar || existingByMobile) {
+      throw new Error('Candidate already exists with this Aadhar or mobile number');
+    }
+
     const candidateId = `TRN${String(candidates.length + 1).padStart(3, '0')}`;
-    const newCandidate = { ...candidate, id: candidateId, status: 'Enrolled' as const };
+    const newCandidate = { 
+      ...candidate, 
+      id: candidateId, 
+      status: 'Enrolled' as const,
+      createdAt: new Date()
+    };
     setCandidates([...candidates, newCandidate]);
     return candidateId;
   };

@@ -86,13 +86,18 @@ const RegistrationPage = () => {
 
     // Simulate API call
     setTimeout(() => {
-      const newCandidateId = addCandidate({
-        ...formData,
-        trained: false,
-        status: 'Enrolled'
-      });
-      setCandidateId(newCandidateId);
-      setLoading(false);
+      try {
+        const newCandidateId = addCandidate({
+          ...formData,
+          trained: false,
+          status: 'Enrolled'
+        });
+        setCandidateId(newCandidateId);
+        setLoading(false);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Registration failed');
+        setLoading(false);
+      }
     }, 1500);
   };
 

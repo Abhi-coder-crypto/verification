@@ -152,8 +152,10 @@ const VerificationPage = () => {
       return;
     }
 
-    if (isAlreadyTrained(extractedAadharData.aadhar, mobile)) {
-      setError('This candidate is already trained and cannot be registered again.');
+    // Check for duplicate registration
+    const existingCandidate = findCandidate(extractedAadharData.aadhar, mobile);
+    if (existingCandidate) {
+      setError(`This candidate is already registered with ID: ${existingCandidate.id}. Status: ${existingCandidate.status}`);
       setSuccess('');
       return;
     }
