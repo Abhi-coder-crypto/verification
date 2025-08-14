@@ -21,7 +21,8 @@ const AdminPage = () => {
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     refetchInterval: 5000, // Refresh every 5 seconds
-    staleTime: 0
+    staleTime: 0, // Always consider data stale
+    gcTime: 0 // Don't cache data
   });
 
   // Initialize search results with all candidates when data is loaded
@@ -51,6 +52,7 @@ const AdminPage = () => {
   // Debug logging
   useEffect(() => {
     console.log('Admin Dashboard - Candidates loaded:', candidates.length);
+    console.log('Admin Dashboard - Raw candidates data:', candidates);
     console.log('Admin Dashboard - Query error:', queryError);
     console.log('Admin Dashboard - Is loading:', isLoading);
   }, [candidates, queryError, isLoading]);
