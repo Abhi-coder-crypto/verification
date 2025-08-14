@@ -55,7 +55,15 @@ export interface Candidate {
 }
 ```
 
+## MongoDB Configuration
+**Important**: This application requires MongoDB for complete functionality:
+- **Connection String**: `mongodb+srv://abhijeet18012001:0tHeU22kRKBldEiX@verifying.liwmsxe.mongodb.net/?retryWrites=true&w=majority&appName=verifying`
+- **Environment Variable**: Set `MONGODB_URI` in Replit Secrets
+- **Purpose**: Prevents duplicate verifications, enforces unique Aadhar registration, maintains persistent data for admin dashboard
+
 ## Recent Changes
+- **2025-08-14**: Restored MongoDB functionality for complete application flow with duplicate prevention
+- **2025-08-14**: Updated migration to preserve MongoDB configuration and fallback to in-memory storage
 - **2025-08-14**: Fixed admin dashboard real-time updates with automatic refresh every 5 seconds
 - **2025-08-14**: Added manual refresh button to admin dashboard with loading animation
 - **2025-08-14**: Implemented cache invalidation after new candidate registration
