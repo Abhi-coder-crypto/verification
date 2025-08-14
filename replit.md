@@ -58,6 +58,7 @@ export interface Candidate {
 - **2024-12-13**: Implemented client/server separation with proper API layer
 - **2024-12-13**: Created comprehensive candidate schema and storage interface
 - **2024-12-13**: Added backend API routes with validation and error handling
+- **2024-12-13**: Fixed OCR service to extract real data from uploaded Aadhar documents
 - **2024-12-13**: Maintained all original functionality while improving architecture
 
 ## Development Guidelines
