@@ -1,9 +1,8 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'wouter';
 import { UserCheck, UserPlus, Search } from 'lucide-react';
 
-const Navigation: React.FC = () => {
-  const location = useLocation();
+const Navigation = () => {
+  const [location] = useLocation();
 
   const navItems = [
     { path: '/verification', label: 'Verification', icon: UserCheck },
@@ -22,11 +21,11 @@ const Navigation: React.FC = () => {
           
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
             {navItems.map(({ path, label, icon: Icon }) => {
-              const isActive = location.pathname === path || (path === '/verification' && location.pathname === '/');
+              const isActive = location === path || (path === '/verification' && location === '/');
               return (
                 <Link
                   key={path}
-                  to={path}
+                  href={path}
                   className={`flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                     isActive
                       ? 'bg-blue-500 text-white shadow-md'

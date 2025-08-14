@@ -1,0 +1,115 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertCandidateSchema } from "@shared/schema";
+import { z } from "zod";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Get all candidates
+  app.get("/api/candidates", async (req, res) => {
+    try {
+      const candidates = await storage.getAllCandidates();
+      res.json(candidates);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch candidates" });
+    }
+  });
+
+  // Get candidate by ID
+  app.get("/api/candidates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid candidate ID" });
+      }
+
+      const candidate = await storage.getCandidate(id);
+      if (!candidate) {
+        return res.status(404).json({ error: "Candidate not found" });
+      }
+
+      res.json(candidate);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch candidate" });
+    }
+  });
+
+  // Search candidates by Aadhar or Mobile
+  app.post("/api/candidates/search", async (req, res) => {
+    try {
+      const { aadhar, mobile } = req.body;
+
+      let candidate;
+      if (aadhar) {
+        candidate = await storage.getCandidateByAadhar(aadhar);
+      } else if (mobile) {
+        candidate = await storage.getCandidateByMobile(mobile);
+      } else {
+        return res.status(400).json({ error: "Either aadhar or mobile is required" });
+      }
+
+      if (!candidate) {
+        return res.status(404).json({ error: "Candidate not found" });
+      }
+
+      res.json(candidate);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to search candidate" });
+    }
+  });
+
+  // Create new candidate
+  app.post("/api/candidates", async (req, res) => {
+    try {
+      const validatedData = insertCandidateSchema.parse(req.body);
+      
+      // Check if candidate already exists
+      const existingCandidate = await storage.getCandidateByAadhar(validatedData.aadhar);
+      if (existingCandidate) {
+        return res.status(409).json({ error: "Candidate with this Aadhar already exists" });
+      }
+
+      // Generate unique candidate ID
+      const candidateId = `TRN${String(Date.now()).slice(-6)}`;
+      
+      const candidate = await storage.createCandidate({
+        ...validatedData,
+        candidateId
+      });
+
+      res.status(201).json(candidate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid candidate data", 
+          details: error.errors 
+        });
+      }
+      res.status(500).json({ error: "Failed to create candidate" });
+    }
+  });
+
+  // Update candidate
+  app.put("/api/candidates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid candidate ID" });
+      }
+
+      const updates = req.body;
+      const candidate = await storage.updateCandidate(id, updates);
+
+      if (!candidate) {
+        return res.status(404).json({ error: "Candidate not found" });
+      }
+
+      res.json(candidate);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update candidate" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

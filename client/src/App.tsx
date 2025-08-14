@@ -1,5 +1,4 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Route } from 'wouter';
 import { CandidateProvider } from './context/CandidateContext';
 import Navigation from './components/Navigation';
 import VerificationPage from './pages/VerificationPage';
@@ -9,19 +8,15 @@ import StatusPage from './pages/StatusPage';
 function App() {
   return (
     <CandidateProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <Navigation />
-          <main className="container mx-auto px-4 py-6">
-            <Routes>
-              <Route path="/" element={<VerificationPage />} />
-              <Route path="/verification" element={<VerificationPage />} />
-              <Route path="/registration" element={<RegistrationPage />} />
-              <Route path="/status" element={<StatusPage />} />
-            </Routes>
-          </main>
-        </div>
-      </Router>
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <main className="container mx-auto px-4 py-6">
+          <Route path="/" component={VerificationPage} />
+          <Route path="/verification" component={VerificationPage} />
+          <Route path="/registration" component={RegistrationPage} />
+          <Route path="/status" component={StatusPage} />
+        </main>
+      </div>
     </CandidateProvider>
   );
 }

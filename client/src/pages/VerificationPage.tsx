@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { Phone, FileText, Shield, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCandidateContext } from '../context/CandidateContext';
 import { smsService } from '../services/smsService';
@@ -7,8 +7,8 @@ import { otpService } from '../services/otpService';
 import { ocrService } from '../services/ocrService';
 import type { AadharData } from '../services/ocrService';
 
-const VerificationPage: React.FC = () => {
-  const navigate = useNavigate();
+const VerificationPage = () => {
+  const [, setLocation] = useLocation();
   const { setCurrentCandidate, isAlreadyTrained } = useCandidateContext();
   
   const [mobile, setMobile] = useState('');
@@ -158,7 +158,7 @@ const VerificationPage: React.FC = () => {
       return;
     }
 
-    navigate('/registration');
+    setLocation('/registration');
   };
 
   const handleAadharUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

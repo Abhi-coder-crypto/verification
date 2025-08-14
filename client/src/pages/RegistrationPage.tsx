@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCandidateContext } from '../context/CandidateContext';
 
-const RegistrationPage: React.FC = () => {
-  const navigate = useNavigate();
+const RegistrationPage = () => {
+  const [, setLocation] = useLocation();
   const { currentCandidate, addCandidate } = useCandidateContext();
   
   const [formData, setFormData] = useState({
@@ -113,13 +113,13 @@ const RegistrationPage: React.FC = () => {
           </p>
           <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
             <button
-              onClick={() => navigate('/verification')}
+              onClick={() => setLocation('/verification')}
               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
             >
               Register Another Candidate
             </button>
             <button
-              onClick={() => navigate('/status')}
+              onClick={() => setLocation('/status')}
               className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
             >
               Check Status
