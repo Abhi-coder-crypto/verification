@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Shield, User, Eye, EyeOff, LogIn, Search, Download, Filter, Users } from 'lucide-react';
+import { Shield, User, Eye, EyeOff, LogIn, Search, Download, Filter, Users, RefreshCw } from 'lucide-react';
 import { apiRequest } from '../lib/queryClient';
 import type { Candidate } from '@shared/schema';
 
@@ -13,21 +13,40 @@ const AdminPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Candidate[]>([]);
 
-  // Fetch all candidates when logged in
-  const { data: candidates = [], isLoading, error: queryError } = useQuery<Candidate[]>({
+  // Fetch all candidates when logged in with auto-refresh
+  const { data: candidates = [], isLoading, error: queryError, refetch } = useQuery<Candidate[]>({
     queryKey: ['/api/candidates'],
     enabled: isLoggedIn,
     retry: false,
     refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Refresh every 5 seconds
     staleTime: 0
   });
 
   // Initialize search results with all candidates when data is loaded
   useEffect(() => {
-    if (candidates.length > 0) {
+    if (candidates && candidates.length >= 0) {
       setSearchResults(candidates);
     }
   }, [candidates]);
+
+  // Auto-refresh data every 10 seconds when logged in
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isLoggedIn) {
+      interval = setInterval(() => {
+        refetch();
+      }, 10000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isLoggedIn, refetch]);
 
   // Debug logging
   useEffect(() => {
@@ -221,6 +240,14 @@ const AdminPage = () => {
             <p className="text-gray-600">Manage candidates and view training status</p>
           </div>
           <div className="flex space-x-4">
+            <button
+              onClick={() => refetch()}
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 inline ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
             <button
               onClick={exportData}
               className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"

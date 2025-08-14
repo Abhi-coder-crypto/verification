@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { useMutation } from '@tanstack/react-query';
 import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCandidateContext } from '../context/CandidateContext';
-import { apiRequest } from '../lib/queryClient';
+import { apiRequest, queryClient } from '../lib/queryClient';
 
 const RegistrationPage = () => {
   const [, setLocation] = useLocation();
@@ -90,6 +90,9 @@ const RegistrationPage = () => {
     onSuccess: (data) => {
       setCandidateId(data.candidateId);
       setLoading(false);
+      
+      // Invalidate candidates cache to update admin dashboard
+      queryClient.invalidateQueries({ queryKey: ['/api/candidates'] });
     },
     onError: (error: any) => {
       setError(error.message || 'Registration failed');

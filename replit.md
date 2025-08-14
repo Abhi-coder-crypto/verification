@@ -56,6 +56,11 @@ export interface Candidate {
 ```
 
 ## Recent Changes
+- **2025-08-14**: Fixed admin dashboard real-time updates with automatic refresh every 5 seconds
+- **2025-08-14**: Added manual refresh button to admin dashboard with loading animation
+- **2025-08-14**: Implemented cache invalidation after new candidate registration
+- **2025-08-14**: MongoDB database connected and cleared of all sample data
+- **2025-08-14**: Ensured proper verification flow with duplicate mobile number prevention
 - **2025-08-14**: Successfully completed migration from Replit Agent to standard Replit environment
 - **2025-08-14**: Enhanced registration validation to prevent duplicate mobile number registration
 - **2025-08-14**: Enhanced OCR service with improved Aadhar card data extraction
