@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Shield, User, Eye, EyeOff, LogIn, Search, Download, Filter, Users } from 'lucide-react';
 import { apiRequest } from '../lib/queryClient';
@@ -8,17 +8,24 @@ const AdminPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [loginError, setLoginError] = useState('');
   const [searchFilter, setSearchFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Candidate[]>([]);
 
   // Fetch all candidates when logged in
-  const { data: candidates = [], isLoading } = useQuery<Candidate[]>({
+  const { data: candidates = [], isLoading, error: queryError } = useQuery<Candidate[]>({
     queryKey: ['/api/candidates'],
     enabled: isLoggedIn,
     retry: false
   });
+
+  // Initialize search results with all candidates when data is loaded
+  useEffect(() => {
+    if (candidates.length > 0 && searchResults.length === 0) {
+      setSearchResults(candidates);
+    }
+  }, [candidates, searchResults.length]);
 
   // Search mutation for individual candidates
   const searchMutation = useMutation({
@@ -42,12 +49,12 @@ const AdminPage = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setLoginError('');
 
     if (loginForm.username === ADMIN_USERNAME && loginForm.password === ADMIN_PASSWORD) {
       setIsLoggedIn(true);
     } else {
-      setError('Invalid username or password');
+      setLoginError('Invalid username or password');
     }
   };
 
@@ -170,9 +177,9 @@ const AdminPage = () => {
               </div>
             </div>
 
-            {error && (
+            {loginError && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {error}
+                {loginError}
               </div>
             )}
 
