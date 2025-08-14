@@ -347,12 +347,7 @@ const VerificationPage = () => {
                     <p><span className="font-medium">Name:</span> {extractedAadharData.name}</p>
                     <p><span className="font-medium">Date of Birth:</span> {new Date(extractedAadharData.dob).toLocaleDateString()}</p>
                     <p><span className="font-medium">Aadhar Number:</span> {extractedAadharData.aadhar}</p>
-                    {extractedAadharData.address && (
-                      <p><span className="font-medium">Address:</span> {extractedAadharData.address}</p>
-                    )}
-                    {extractedAadharData.gender && (
-                      <p><span className="font-medium">Gender:</span> {extractedAadharData.gender}</p>
-                    )}
+                    <p><span className="font-medium">Gender:</span> {extractedAadharData.gender}</p>
                   </div>
                 )}
               </div>
