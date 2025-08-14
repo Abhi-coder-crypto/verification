@@ -16,6 +16,9 @@ const AdminPage = () => {
   // Fetch all candidates when logged in with auto-refresh
   const { data: candidates = [], isLoading, error: queryError, refetch } = useQuery<Candidate[]>({
     queryKey: ['/api/candidates'],
+    queryFn: async () => {
+      return await apiRequest('/api/candidates');
+    },
     enabled: isLoggedIn,
     retry: false,
     refetchOnMount: true,
