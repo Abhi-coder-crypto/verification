@@ -68,6 +68,23 @@ const VerificationPage = () => {
     setSuccess('');
     
     try {
+      // First check if this mobile number is already registered
+      const existingCandidate = await apiRequest('/api/candidates/search', {
+        method: 'POST',
+        body: JSON.stringify({ mobile })
+      }).catch((error) => {
+        if (error.message.includes('not found')) {
+          return null; // No existing candidate, continue with verification
+        }
+        throw error;
+      });
+
+      if (existingCandidate) {
+        setError(`This mobile number is already registered with Candidate ID: ${existingCandidate.candidateId}. Status: ${existingCandidate.status}. You cannot register again with the same mobile number.`);
+        setLoading(false);
+        return;
+      }
+      
       // Generate OTP
       const generatedOTP = otpService.generateOTP();
       console.log('Generated OTP:', generatedOTP); // For debugging
