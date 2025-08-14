@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { useMutation } from '@tanstack/react-query';
 import { Phone, FileText, Shield, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCandidateContext } from '../context/CandidateContext';
 import { smsService } from '../services/smsService';
 import { otpService } from '../services/otpService';
 import { ocrService } from '../services/ocrService';
+import { apiRequest } from '../lib/queryClient';
 import type { AadharData } from '../services/ocrService';
 
 const VerificationPage = () => {
   const [, setLocation] = useLocation();
-  const { setCurrentCandidate, isAlreadyTrained } = useCandidateContext();
+  const { setCurrentCandidate } = useCandidateContext();
   
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
@@ -24,6 +26,36 @@ const VerificationPage = () => {
   const [resendTimer, setResendTimer] = useState(0);
 
   const [extractedAadharData, setExtractedAadharData] = useState<AadharData | null>(null);
+
+  // Mutation for checking duplicate candidates
+  const checkDuplicateMutation = useMutation({
+    mutationFn: async ({ aadhar, mobile }: { aadhar: string; mobile: string }) => {
+      try {
+        const response = await apiRequest('/api/candidates/search', {
+          method: 'POST',
+          body: JSON.stringify({ aadhar })
+        });
+        return response;
+      } catch (error: any) {
+        if (error.message.includes('not found')) {
+          return null; // No duplicate found, proceed to registration
+        }
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      if (data) {
+        setError(`This candidate is already registered with ID: ${data.candidateId}. Status: ${data.status}`);
+        setSuccess('');
+      } else {
+        // No duplicate found, proceed to registration
+        setLocation('/registration');
+      }
+    },
+    onError: (error: any) => {
+      setError(error.message || 'Failed to check for duplicate registration');
+    }
+  });
 
   const handleSendOTP = async () => {
     if (!mobile || mobile.length !== 10) {
@@ -152,15 +184,11 @@ const VerificationPage = () => {
       return;
     }
 
-    // Check for duplicate registration
-    const existingCandidate = findCandidate(extractedAadharData.aadhar, mobile);
-    if (existingCandidate) {
-      setError(`This candidate is already registered with ID: ${existingCandidate.id}. Status: ${existingCandidate.status}`);
-      setSuccess('');
-      return;
-    }
-
-    setLocation('/registration');
+    // Check for duplicate registration via API
+    checkDuplicateMutation.mutate({
+      aadhar: extractedAadharData.aadhar,
+      mobile: mobile
+    });
   };
 
   const handleAadharUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

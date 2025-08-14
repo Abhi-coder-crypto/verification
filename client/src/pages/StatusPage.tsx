@@ -1,20 +1,38 @@
 import React, { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { Search, User, BookOpen, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { useCandidateContext } from '../context/CandidateContext';
-import { Candidate } from '../context/CandidateContext';
+import { apiRequest } from '../lib/queryClient';
+import type { Candidate } from '@shared/schema';
 
 const StatusPage: React.FC = () => {
-  const { candidates, findCandidate } = useCandidateContext();
   const [searchType, setSearchType] = useState<'aadhar' | 'mobile'>('aadhar');
   const [searchValue, setSearchValue] = useState('');
   const [searchResults, setSearchResults] = useState<Candidate | null>(null);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
 
+  // Mutation for searching candidates
+  const searchMutation = useMutation({
+    mutationFn: async ({ aadhar, mobile }: { aadhar?: string; mobile?: string }) => {
+      return await apiRequest('/api/candidates/search', {
+        method: 'POST',
+        body: JSON.stringify({ aadhar, mobile })
+      });
+    },
+    onSuccess: (data) => {
+      setSearchResults(data);
+      setSearched(true);
+    },
+    onError: (error: any) => {
+      setSearchResults(null);
+      setSearched(true);
+      setError(error.message || 'Candidate not found');
+    }
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSearched(true);
 
     if (!searchValue.trim()) {
       setError('Please enter a search value');
@@ -31,12 +49,10 @@ const StatusPage: React.FC = () => {
       return;
     }
 
-    const result = findCandidate(
-      searchType === 'aadhar' ? searchValue : '',
-      searchType === 'mobile' ? searchValue : ''
-    );
-
-    setSearchResults(result || null);
+    searchMutation.mutate({
+      aadhar: searchType === 'aadhar' ? searchValue : undefined,
+      mobile: searchType === 'mobile' ? searchValue : undefined
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -194,25 +210,17 @@ const StatusPage: React.FC = () => {
           </div>
         )}
 
-        {/* Quick Stats */}
+        {/* Instructions */}
         <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Training Statistics</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{candidates.length}</div>
-              <div className="text-sm text-gray-600">Total Candidates</div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">How to Search</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+            <div className="bg-white rounded-lg p-4">
+              <div className="font-medium text-gray-800 mb-2">By Aadhar Number</div>
+              <div>Enter your 12-digit Aadhar number to check training status</div>
             </div>
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {candidates.filter(c => c.status === 'Completed').length}
-              </div>
-              <div className="text-sm text-gray-600">Completed</div>
-            </div>
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {candidates.filter(c => c.status === 'Enrolled').length}
-              </div>
-              <div className="text-sm text-gray-600">Currently Enrolled</div>
+            <div className="bg-white rounded-lg p-4">
+              <div className="font-medium text-gray-800 mb-2">By Mobile Number</div>
+              <div>Enter your 10-digit mobile number used during registration</div>
             </div>
           </div>
         </div>

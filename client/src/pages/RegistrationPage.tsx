@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { useMutation } from '@tanstack/react-query';
 import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCandidateContext } from '../context/CandidateContext';
+import { apiRequest } from '../lib/queryClient';
 
 const RegistrationPage = () => {
   const [, setLocation] = useLocation();
-  const { currentCandidate, addCandidate } = useCandidateContext();
+  const { currentCandidate } = useCandidateContext();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -72,6 +74,28 @@ const RegistrationPage = () => {
     }
   };
 
+  // Registration mutation
+  const registerMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      return await apiRequest('/api/candidates', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          trained: false,
+          status: 'Enrolled'
+        })
+      });
+    },
+    onSuccess: (data) => {
+      setCandidateId(data.candidateId);
+      setLoading(false);
+    },
+    onError: (error: any) => {
+      setError(error.message || 'Registration failed');
+      setLoading(false);
+    }
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -83,22 +107,7 @@ const RegistrationPage = () => {
     }
 
     setLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      try {
-        const newCandidateId = addCandidate({
-          ...formData,
-          trained: false,
-          status: 'Enrolled'
-        });
-        setCandidateId(newCandidateId);
-        setLoading(false);
-      } catch (error) {
-        setError(error instanceof Error ? error.message : 'Registration failed');
-        setLoading(false);
-      }
-    }, 1500);
+    registerMutation.mutate(formData);
   };
 
   if (candidateId) {

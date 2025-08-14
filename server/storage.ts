@@ -72,7 +72,14 @@ export class MemStorage implements IStorage {
       const fullCandidate: Candidate = { 
         ...candidate, 
         id, 
-        createdAt: new Date() 
+        createdAt: new Date(),
+        address: candidate.address ?? null,
+        program: candidate.program ?? null,
+        center: candidate.center ?? null,
+        trainer: candidate.trainer ?? null,
+        duration: candidate.duration ?? null,
+        trained: candidate.trained ?? false,
+        status: candidate.status ?? 'Not Enrolled'
       };
       this.candidates.set(id, fullCandidate);
     });
@@ -105,7 +112,14 @@ export class MemStorage implements IStorage {
     const candidate: Candidate = { 
       ...insertCandidate, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      address: insertCandidate.address ?? null,
+      program: insertCandidate.program ?? null,
+      center: insertCandidate.center ?? null,
+      trainer: insertCandidate.trainer ?? null,
+      duration: insertCandidate.duration ?? null,
+      trained: insertCandidate.trained ?? false,
+      status: insertCandidate.status ?? 'Not Enrolled'
     };
     this.candidates.set(id, candidate);
     return candidate;

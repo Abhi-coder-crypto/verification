@@ -1,10 +1,10 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Shield, User, Eye, EyeOff, LogIn, Search, Download, Filter, Users } from 'lucide-react';
-import { useCandidateContext } from '../context/CandidateContext';
-import type { Candidate } from '../context/CandidateContext';
+import { apiRequest } from '../lib/queryClient';
+import type { Candidate } from '@shared/schema';
 
 const AdminPage = () => {
-  const { candidates, findCandidate } = useCandidateContext();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -12,6 +12,29 @@ const AdminPage = () => {
   const [searchFilter, setSearchFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Candidate[]>([]);
+
+  // Fetch all candidates when logged in
+  const { data: candidates = [], isLoading } = useQuery<Candidate[]>({
+    queryKey: ['/api/candidates'],
+    enabled: isLoggedIn,
+    retry: false
+  });
+
+  // Search mutation for individual candidates
+  const searchMutation = useMutation({
+    mutationFn: async ({ aadhar, mobile }: { aadhar?: string; mobile?: string }) => {
+      return await apiRequest('/api/candidates/search', {
+        method: 'POST',
+        body: JSON.stringify({ aadhar, mobile })
+      });
+    },
+    onSuccess: (data) => {
+      setSearchResults([data]);
+    },
+    onError: () => {
+      setSearchResults([]);
+    }
+  });
 
   // Admin credentials (in production, this would be handled securely)
   const ADMIN_USERNAME = 'admin';
@@ -23,7 +46,6 @@ const AdminPage = () => {
 
     if (loginForm.username === ADMIN_USERNAME && loginForm.password === ADMIN_PASSWORD) {
       setIsLoggedIn(true);
-      setSearchResults(candidates);
     } else {
       setError('Invalid username or password');
     }
@@ -37,17 +59,13 @@ const AdminPage = () => {
       return;
     }
 
-    let results: Candidate[] = [];
-    
     if (searchFilter === 'aadhar') {
-      const candidate = findCandidate(searchTerm, '');
-      if (candidate) results = [candidate];
+      searchMutation.mutate({ aadhar: searchTerm });
     } else if (searchFilter === 'mobile') {
-      const candidate = findCandidate('', searchTerm);
-      if (candidate) results = [candidate];
+      searchMutation.mutate({ mobile: searchTerm });
     } else {
-      // Search all fields
-      results = candidates.filter(candidate => 
+      // Search all fields locally
+      const results = candidates.filter((candidate: Candidate) => 
         candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         candidate.aadhar.includes(searchTerm) ||
         candidate.mobile.includes(searchTerm) ||
@@ -55,9 +73,8 @@ const AdminPage = () => {
         candidate.program?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         candidate.center?.toLowerCase().includes(searchTerm.toLowerCase())
       );
+      setSearchResults(results);
     }
-
-    setSearchResults(results);
   };
 
   const getStatusColor = (status: string) => {
@@ -75,7 +92,7 @@ const AdminPage = () => {
     const csvContent = [
       'Candidate ID,Name,DOB,Mobile,Aadhar,Program,Center,Status,Created',
       ...searchResults.map(candidate => [
-        candidate.id || '',
+        candidate.candidateId || '',
         candidate.name,
         candidate.dob,
         candidate.mobile,
