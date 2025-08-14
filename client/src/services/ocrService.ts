@@ -214,6 +214,9 @@ export class OCRService {
       'DIST', 'DISTRICT', 'TALUKA', 'TEHSIL', 'VILLAGE', 'CITY', 'TOWN'
     ];
     
+    // Add KHANNA to location keywords since it's a common location component
+    locationKeywords.push('KHANNA');
+    
     // Create a comprehensive pattern to match names before any location keyword
     const locationPattern = new RegExp(`([A-Z][a-zA-Z]+(?:\\s+[A-Z][a-zA-Z]+){1,4})(?=\\s+(?:${locationKeywords.join('|')}))`, 'i');
     
@@ -236,6 +239,46 @@ export class OCRService {
         
         if (cleanWords.length >= 2) {
           name = cleanWords.join(' ');
+        }
+      }
+    }
+
+    // Strategy 1b: More direct approach - split text and find names before location words
+    if (!name) {
+      const textParts = fullText.split(/\s+/);
+      for (let i = 0; i < textParts.length - 1; i++) {
+        const word = textParts[i];
+        const nextWord = textParts[i + 1];
+        
+        // Check if current word is followed by a location keyword
+        if (locationKeywords.some(keyword => 
+          nextWord && nextWord.toUpperCase() === keyword.toUpperCase())) {
+          
+          // Look backwards to collect the name
+          let nameWords = [];
+          let j = i;
+          while (j >= 0 && nameWords.length < 5) {
+            const currentWord = textParts[j];
+            // Stop if we hit government text, numbers, or other non-name indicators
+            if (currentWord.match(/government|india|aadhaar|unique|identification|\d+/i)) {
+              break;
+            }
+            // Add word if it looks like a name part
+            if (currentWord.match(/^[A-Z][a-zA-Z]+$/)) {
+              nameWords.unshift(currentWord);
+            } else {
+              break;
+            }
+            j--;
+          }
+          
+          if (nameWords.length >= 2 && nameWords.length <= 5) {
+            const candidateName = nameWords.join(' ');
+            if (candidateName.length >= 6 && candidateName.length <= 50) {
+              name = candidateName;
+              break;
+            }
+          }
         }
       }
     }
