@@ -1,6 +1,4 @@
-import twilio from 'twilio';
-
-// SMS Service for sending OTP
+// SMS Service for sending OTP (Browser-compatible version)
 export interface SMSResponse {
   success: boolean;
   message: string;
@@ -9,17 +7,9 @@ export interface SMSResponse {
 
 export class SMSService {
   private static instance: SMSService;
-  private twilioClient: any;
-  private twilioPhoneNumber: string;
 
   private constructor() {
-    const accountSid = import.meta.env.VITE_TWILIO_ACCOUNT_SID;
-    const authToken = import.meta.env.VITE_TWILIO_AUTH_TOKEN;
-    this.twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER || '';
-
-    if (accountSid && authToken) {
-      this.twilioClient = twilio(accountSid, authToken);
-    }
+    // Browser-compatible constructor - no Twilio client initialization
   }
 
   public static getInstance(): SMSService {
@@ -29,62 +19,28 @@ export class SMSService {
     return SMSService.instance;
   }
 
-  private isConfigured(): boolean {
-    return !!(this.twilioClient && this.twilioPhoneNumber);
-  }
-
   public async sendOTP(phoneNumber: string, otp: string): Promise<SMSResponse> {
     try {
-      // Format phone number for international format
+      // Format phone number for display
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       
-      if (!this.isConfigured()) {
-        console.warn('Twilio not configured. Using demo mode.');
-        console.log(`📱 Demo SMS: OTP ${otp} would be sent to ${formattedPhone}`);
-        
-        // Show alert to user in demo mode
-        alert(`Demo Mode: Your OTP is ${otp}\n\nTo receive real SMS:\n1. Sign up at https://console.twilio.com/\n2. Get Account SID, Auth Token, and Phone Number\n3. Add them to your .env file`);
-        
-        return {
-          success: true,
-          message: `Demo: OTP ${otp} displayed (would be sent to ${formattedPhone})`,
-          sid: 'demo_' + Date.now()
-        };
-      }
-
-      // Send real SMS using Twilio
-      const message = await this.twilioClient.messages.create({
-        body: `Your OTP for Training Portal verification is: ${otp}. Valid for 5 minutes. Do not share this code.`,
-        from: this.twilioPhoneNumber,
-        to: formattedPhone
-      });
-
-      console.log('SMS sent successfully:', message.sid);
+      // Browser demo mode - show OTP in alert
+      console.log(`📱 Demo SMS: OTP ${otp} would be sent to ${formattedPhone}`);
+      
+      // Show alert to user in demo mode
+      alert(`Demo Mode: Your OTP is ${otp}\n\nTo receive real SMS:\n1. Sign up at https://console.twilio.com/\n2. Get Account SID, Auth Token, and Phone Number\n3. Add them to your .env file\n4. Implement server-side SMS sending`);
       
       return {
         success: true,
-        message: `OTP sent successfully to ${formattedPhone}`,
-        sid: message.sid
+        message: `Demo: OTP ${otp} displayed (would be sent to ${formattedPhone})`,
+        sid: 'demo_' + Date.now()
       };
     } catch (error: any) {
-      console.error('SMS sending failed:', error);
-      
-      // Provide specific error messages
-      let errorMessage = 'Failed to send SMS. Please try again.';
-      
-      if (error.code === 21211) {
-        errorMessage = 'Invalid phone number format. Please check and try again.';
-      } else if (error.code === 21608) {
-        errorMessage = 'Phone number is not reachable. Please verify the number.';
-      } else if (error.code === 21614) {
-        errorMessage = 'Invalid phone number. Please enter a valid mobile number.';
-      } else if (error.message?.includes('authenticate')) {
-        errorMessage = 'SMS service configuration error. Please contact support.';
-      }
+      console.error('SMS demo failed:', error);
       
       return {
         success: false,
-        message: errorMessage
+        message: 'Demo mode error. Please try again.'
       };
     }
   }
