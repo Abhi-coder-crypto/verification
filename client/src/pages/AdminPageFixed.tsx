@@ -16,6 +16,9 @@ const AdminPage = () => {
   // Fetch all candidates when logged in
   const { data: candidates = [], isLoading, error: queryError, refetch } = useQuery<Candidate[]>({
     queryKey: ['/api/candidates'],
+    queryFn: async () => {
+      return await apiRequest('/api/candidates');
+    },
     enabled: isLoggedIn,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
@@ -26,12 +29,12 @@ const AdminPage = () => {
 
   // Set search results when candidates change (but avoid infinite loop)
   useEffect(() => {
-    if (isLoggedIn && candidates) {
+    if (isLoggedIn) {
       console.log('Admin Dashboard - Candidates loaded:', candidates.length);
       console.log('Admin Dashboard - Raw candidates data:', candidates);
       setSearchResults(candidates);
     }
-  }, [candidates, isLoggedIn]);
+  }, [candidates.length, isLoggedIn]); // Use candidates.length instead of candidates object to prevent infinite loop
 
   // Search mutation for individual candidates
   const searchMutation = useMutation({

@@ -4,7 +4,7 @@ import Navigation from './components/Navigation';
 import VerificationPage from './pages/VerificationPage';
 import RegistrationPage from './pages/RegistrationPage';
 import StatusPage from './pages/StatusPage';
-import AdminPage from './pages/AdminPageFixed';
+import AdminPage from './pages/AdminPage';
 
 function App() {
   return (
