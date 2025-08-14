@@ -22,30 +22,45 @@ This application uses Twilio for SMS functionality. To enable real SMS sending:
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file in the root directory with:
+Update the `.env` file in the root directory with your actual Twilio credentials:
 
 ```env
-VITE_TWILIO_ACCOUNT_SID=your_account_sid_here
-VITE_TWILIO_AUTH_TOKEN=your_auth_token_here
-VITE_TWILIO_PHONE_NUMBER=your_twilio_phone_number_here
+VITE_TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+VITE_TWILIO_AUTH_TOKEN=your_32_character_auth_token
+VITE_TWILIO_PHONE_NUMBER=+1234567890
 ```
 
-### 3. Production Implementation
+### 3. Quick Setup Guide
+
+1. **Sign up**: Go to [https://console.twilio.com/](https://console.twilio.com/)
+2. **Verify your phone**: Twilio will ask you to verify your phone number
+3. **Get a phone number**: Purchase a phone number from Twilio (usually $1/month)
+4. **Find credentials**: 
+   - Account SID: Found on your Twilio Console Dashboard
+   - Auth Token: Click "Show" next to Auth Token on Dashboard
+   - Phone Number: The number you purchased (format: +1234567890)
+5. **Update .env**: Replace the placeholder values with your real credentials
+6. **Restart app**: Stop and restart your development server
+
+### 4. Production Implementation
 
 For production use, you'll need to:
 
-1. Uncomment the Twilio client code in `src/services/smsService.ts`
-2. Install the Twilio SDK server-side component
-3. Implement proper error handling and rate limiting
+1. Ensure all Twilio credentials are properly set
+2. Test with your own phone number first
+3. Consider implementing rate limiting for production
 4. Add phone number validation for your target region
+5. Monitor SMS usage and costs in Twilio Console
 
 ## Demo Mode
 
 Without Twilio configuration, the app runs in demo mode:
-- SMS sending is simulated with console logs
+- SMS sending shows an alert with the OTP
+- Console logs show what would be sent
 - OTP generation and validation still work
 - All other features remain functional
 
+**Current Status**: The app will show you the OTP in an alert popup if Twilio is not configured, so you can still test the complete flow.
 ## Getting Started
 
 1. Install dependencies:

@@ -41,6 +41,7 @@ const VerificationPage: React.FC = () => {
     try {
       // Generate OTP
       const generatedOTP = otpService.generateOTP();
+      console.log('Generated OTP:', generatedOTP); // For debugging
       
       // Send SMS
       const smsResponse = await smsService.sendOTP(mobile, generatedOTP);

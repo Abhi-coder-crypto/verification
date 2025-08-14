@@ -1,3 +1,5 @@
+import twilio from 'twilio';
+
 // SMS Service for sending OTP
 export interface SMSResponse {
   success: boolean;
@@ -7,14 +9,17 @@ export interface SMSResponse {
 
 export class SMSService {
   private static instance: SMSService;
-  private twilioAccountSid: string;
-  private twilioAuthToken: string;
+  private twilioClient: any;
   private twilioPhoneNumber: string;
 
   private constructor() {
-    this.twilioAccountSid = import.meta.env.VITE_TWILIO_ACCOUNT_SID || '';
-    this.twilioAuthToken = import.meta.env.VITE_TWILIO_AUTH_TOKEN || '';
+    const accountSid = import.meta.env.VITE_TWILIO_ACCOUNT_SID;
+    const authToken = import.meta.env.VITE_TWILIO_AUTH_TOKEN;
     this.twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER || '';
+
+    if (accountSid && authToken) {
+      this.twilioClient = twilio(accountSid, authToken);
+    }
   }
 
   public static getInstance(): SMSService {
@@ -25,58 +30,63 @@ export class SMSService {
   }
 
   private isConfigured(): boolean {
-    return !!(this.twilioAccountSid && this.twilioAuthToken && this.twilioPhoneNumber);
+    return !!(this.twilioClient && this.twilioPhoneNumber);
   }
 
   public async sendOTP(phoneNumber: string, otp: string): Promise<SMSResponse> {
-    // For demo purposes, we'll simulate SMS sending
-    // In production, you would use Twilio's REST API
-    
-    if (!this.isConfigured()) {
-      console.warn('Twilio not configured. Using demo mode.');
-      return this.simulateSMS(phoneNumber, otp);
-    }
-
     try {
       // Format phone number for international format
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       
-      // In a real implementation, you would make an API call to Twilio
-      // const client = twilio(this.twilioAccountSid, this.twilioAuthToken);
-      // const message = await client.messages.create({
-      //   body: `Your OTP for training portal verification is: ${otp}. Valid for 5 minutes.`,
-      //   from: this.twilioPhoneNumber,
-      //   to: formattedPhone
-      // });
+      if (!this.isConfigured()) {
+        console.warn('Twilio not configured. Using demo mode.');
+        console.log(`📱 Demo SMS: OTP ${otp} would be sent to ${formattedPhone}`);
+        
+        // Show alert to user in demo mode
+        alert(`Demo Mode: Your OTP is ${otp}\n\nTo receive real SMS:\n1. Sign up at https://console.twilio.com/\n2. Get Account SID, Auth Token, and Phone Number\n3. Add them to your .env file`);
+        
+        return {
+          success: true,
+          message: `Demo: OTP ${otp} displayed (would be sent to ${formattedPhone})`,
+          sid: 'demo_' + Date.now()
+        };
+      }
 
-      // For now, simulate the API call
-      await this.delay(1000);
+      // Send real SMS using Twilio
+      const message = await this.twilioClient.messages.create({
+        body: `Your OTP for Training Portal verification is: ${otp}. Valid for 5 minutes. Do not share this code.`,
+        from: this.twilioPhoneNumber,
+        to: formattedPhone
+      });
+
+      console.log('SMS sent successfully:', message.sid);
       
       return {
         success: true,
-        message: `OTP sent successfully to ${phoneNumber}`,
-        sid: 'demo_message_sid_' + Date.now()
+        message: `OTP sent successfully to ${formattedPhone}`,
+        sid: message.sid
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('SMS sending failed:', error);
+      
+      // Provide specific error messages
+      let errorMessage = 'Failed to send SMS. Please try again.';
+      
+      if (error.code === 21211) {
+        errorMessage = 'Invalid phone number format. Please check and try again.';
+      } else if (error.code === 21608) {
+        errorMessage = 'Phone number is not reachable. Please verify the number.';
+      } else if (error.code === 21614) {
+        errorMessage = 'Invalid phone number. Please enter a valid mobile number.';
+      } else if (error.message?.includes('authenticate')) {
+        errorMessage = 'SMS service configuration error. Please contact support.';
+      }
+      
       return {
         success: false,
-        message: 'Failed to send SMS. Please try again.'
+        message: errorMessage
       };
     }
-  }
-
-  private simulateSMS(phoneNumber: string, otp: string): Promise<SMSResponse> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`📱 SMS Simulation: Sending OTP ${otp} to ${phoneNumber}`);
-        resolve({
-          success: true,
-          message: `OTP sent to ${phoneNumber} (Demo Mode)`,
-          sid: 'demo_' + Date.now()
-        });
-      }, 1000);
-    });
   }
 
   private formatPhoneNumber(phoneNumber: string): string {
@@ -93,11 +103,8 @@ export class SMSService {
       return '+' + cleaned;
     }
     
+    // For other countries, you can add more logic here
     return '+91' + cleaned.slice(-10);
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 
