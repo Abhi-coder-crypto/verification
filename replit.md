@@ -4,7 +4,7 @@
 A React-based training portal for verifying candidates and managing enrollment. This system handles mobile OTP verification, Aadhar document processing via OCR, candidate registration, and status checking.
 
 ## Migration Status: COMPLETE ✓
-Successfully migrated from Bolt to Replit environment with full client/server separation and modern stack.
+Successfully migrated from Replit Agent to standard Replit environment with enhanced OCR capabilities and improved data extraction.
 
 ## Project Architecture
 
@@ -55,7 +55,11 @@ export interface Candidate {
 ```
 
 ## Recent Changes
-- **2024-08-14**: Successfully migrated from Replit Agent to Replit environment
+- **2025-08-14**: Successfully completed migration from Replit Agent to standard Replit environment
+- **2025-08-14**: Enhanced OCR service with improved Aadhar card data extraction
+- **2025-08-14**: Fixed name extraction to properly identify person names vs address components
+- **2025-08-14**: Improved field detection using top/bottom section analysis for accurate data placement
+- **2025-08-14**: Added better validation and fallback handling for OCR processing
 - **2024-08-14**: Completed full API integration with React Query for all pages
 - **2024-08-14**: Updated all components to use backend API instead of local context
 - **2024-08-14**: Fixed all TypeScript type issues and LSP diagnostics

@@ -196,42 +196,67 @@ export class OCRService {
       if (aadharNumber) break;
     }
 
-    // Extract name from top section (usually appears early)
+    // Extract name - improved logic to find the actual person's name
     let name = '';
-    const namePatterns = [
-      // Name appears after Government identification or in early lines
-      /(?:भारत सरकार|GOVERNMENT OF INDIA)[\s\S]*?([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,4})/i,
-      // Name in top section - look for proper names
-      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})(?=\s*(?:S\/O|D\/O|W\/O|DOB|जन्म|पिता|माता|Date))/i,
-      // Standalone names in top lines
-      /^([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})$/
+    
+    // First, look for names that appear before common address/location keywords
+    const nameBeforeAddressPatterns = [
+      /([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,4})(?=\s+(?:KHANNA|COMPOUND|CHAWL|ROAD|STREET|NAGAR|COLONY|PARK|BUILDING|SOCIETY|LANE|VITTHALWADI|ULHASNAGAR|MUMBAI|DELHI|BANGALORE|PUNE|CHENNAI|HYDERABAD))/i,
+      /([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,4})(?=\s+(?:NO\.|Nr\.|NEAR|OPP\.|OPPOSITE))/i
     ];
 
-    // Search in top section first (where name usually appears)
-    for (const line of lines.slice(0, midPoint)) {
-      if (line.match(/government|india|aadhaar|unique|identification|authority|male|female|dob|date|year|birth|\d{4}/i)) {
-        continue;
-      }
-      
-      for (const pattern of namePatterns) {
-        const match = line.match(pattern);
-        if (match && match[1] && match[1].length >= 5 && match[1].length <= 50) {
+    for (const pattern of nameBeforeAddressPatterns) {
+      const match = fullText.match(pattern);
+      if (match && match[1] && match[1].length >= 8 && match[1].length <= 60) {
+        // Validate it's a proper name (has at least 2 words)
+        const words = match[1].trim().split(/\s+/);
+        if (words.length >= 2 && words.length <= 5) {
           name = match[1].trim();
           break;
         }
       }
-      if (name) break;
     }
 
-    // If no name found in structured way, look for meaningful names in top section
+    // If not found, look for names in structured format
     if (!name) {
-      const topLines = lines.slice(0, Math.min(5, midPoint));
-      for (const line of topLines) {
+      const structuredNamePatterns = [
+        // Name appears before S/O, D/O, W/O
+        /([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,4})(?=\s*(?:S\/O|D\/O|W\/O|पिता|माता))/i,
+        // Name appears before DOB or Date of Birth
+        /([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,4})(?=\s*(?:DOB|Date of Birth|जन्म))/i,
+        // Name in photo area (often appears near gender)
+        /(?:Male|Female|पुरुष|महिला)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,4})/i
+      ];
+
+      for (const pattern of structuredNamePatterns) {
+        const match = fullText.match(pattern);
+        if (match && match[1] && match[1].length >= 6 && match[1].length <= 50) {
+          const words = match[1].trim().split(/\s+/);
+          if (words.length >= 2) {
+            name = match[1].trim();
+            break;
+          }
+        }
+      }
+    }
+
+    // Fallback: look for well-formed names in the first few lines (excluding government headers)
+    if (!name) {
+      const earlyLines = lines.slice(0, Math.min(6, midPoint));
+      for (const line of earlyLines) {
+        // Skip obvious non-name lines
+        if (line.match(/government|india|aadhaar|unique|identification|authority|male|female|dob|date|year|birth|\d{4}|enrolment|card/i)) {
+          continue;
+        }
+        
+        // Look for proper names (2-4 words, proper case)
         if (line.match(/^[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3}$/) && 
-            !line.match(/government|india|authority|unique/i) &&
-            line.length >= 5 && line.length <= 50) {
-          name = line;
-          break;
+            line.length >= 8 && line.length <= 50) {
+          const words = line.split(/\s+/);
+          if (words.length >= 2 && words.length <= 4) {
+            name = line;
+            break;
+          }
         }
       }
     }
@@ -274,37 +299,60 @@ export class OCRService {
 
     // Extract address from top section (appears after name, before bottom info)
     let address = '';
-    const addressPatterns = [
-      // Look for structured address elements
-      /([A-Za-z0-9\s,\/\-\.]+(?:Road|Street|Lane|Nagar|Colony|Park|Chawl|Building|Society)[A-Za-z0-9\s,\/\-\.]*)/i,
-      // Look for PIN code context
-      /([A-Za-z0-9\s,\/\-\.]+)\s+PIN\s*:?\s*\d{6}/i,
-      // Look for district/state context  
-      /([A-Za-z0-9\s,\/\-\.]+)\s+(?:District|State|PIN)/i
-    ];
+    
+    // If we found a name, extract address from the remaining text after removing the name
+    if (name) {
+      // Remove the name from the text to get cleaner address
+      const textWithoutName = fullText.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').replace(/\s+/g, ' ').trim();
+      
+      const addressPatterns = [
+        // Look for structured address elements after name removal
+        /([A-Za-z0-9\s,\/\-\.]+(?:COMPOUND|CHAWL|ROAD|STREET|NAGAR|COLONY|PARK|BUILDING|SOCIETY|LANE)[A-Za-z0-9\s,\/\-\.]*)/i,
+        // Look for PIN code context
+        /([A-Za-z0-9\s,\/\-\.]+)\s+PIN\s*:?\s*\d{6}/i,
+        // Look for district/state context  
+        /([A-Za-z0-9\s,\/\-\.]+)\s+(?:District|State|VTC|DIST)/i,
+        // Look for address with house/plot numbers
+        /((?:NO|No|PLOT|Plot|H\.NO|HOUSE)\.?\s*[A-Za-z0-9\/\-]+[A-Za-z0-9\s,\/\-\.]+)/i
+      ];
 
-    for (const pattern of addressPatterns) {
-      const match = topSection.match(pattern);
-      if (match && match[1] && match[1].length > 10) {
-        address = match[1].replace(/\s+/g, ' ').trim();
-        break;
+      for (const pattern of addressPatterns) {
+        const match = textWithoutName.match(pattern);
+        if (match && match[1] && match[1].length > 10) {
+          address = match[1].replace(/\s+/g, ' ').trim();
+          break;
+        }
       }
     }
 
-    // Fallback address extraction from lines
+    // Fallback address extraction - find lines that look like addresses but exclude the name
     if (!address) {
       const addressLines = lines.filter(line => {
+        // Skip if this line contains the extracted name
+        if (name && line.includes(name)) {
+          return false;
+        }
+        
         return line.length > 15 &&
-               line.length < 100 &&
+               line.length < 120 &&
                !line.match(/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/) && // Not just a name
                !line.match(/government|india|aadhaar|unique|identification|authority|male|female|dob|date|year|birth/i) &&
                !line.match(/^\d+$/) && // Not just numbers
                (line.includes(',') || line.match(/\d/) || 
-                line.match(/(?:no|road|street|lane|nagar|colony|park|district|state|pin)/i));
+                line.match(/(?:no|road|street|lane|nagar|colony|park|district|state|pin|compound|chawl|building)/i));
       });
 
       if (addressLines.length > 0) {
         address = addressLines[0];
+        // Clean up address by removing any remaining name fragments
+        if (name) {
+          const nameWords = name.split(/\s+/);
+          for (const word of nameWords) {
+            if (word.length > 3) {
+              address = address.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').replace(/\s+/g, ' ').trim();
+            }
+          }
+        }
       }
     }
 
