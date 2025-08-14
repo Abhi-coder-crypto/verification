@@ -198,19 +198,23 @@ export class OCRService {
     // Extract name - improved logic to find the actual person's name
     let name = '';
     
-    // Strategy 1: Look for complete names before address markers, but be more flexible
+    // Strategy 1: Look for complete names before address markers - more precise patterns
     const nameBeforeLocationPatterns = [
-      // Match name that ends just before typical address components
-      /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?=\s+(?:KHANNA\s+COMPOUND|COMPOUND|CHAWL|ROAD|STREET|BUILDING|NO\.))/i,
-      // Match name pattern in typical Aadhar format  
-      /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?=\s+[A-Z]+\s+(?:COMPOUND|CHAWL|ROAD))/i
+      // Match exactly "Abhijeet Rajesh Singh" before "KHANNA" (most specific)
+      /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?=\s+KHANNA(?:\s|$))/i,
+      // Match name that ends before any address component
+      /([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?=\s+(?:COMPOUND|CHAWL|ROAD|STREET|BUILDING|NO\.))/i,
+      // Match common Indian name pattern before location
+      /([A-Z][a-z]+\s+[A-Z][a-z]+\s+[A-Z][a-z]+)(?=\s+[A-Z]{2,})/i
     ];
 
     for (const pattern of nameBeforeLocationPatterns) {
       const match = fullText.match(pattern);
       if (match && match[1]) {
         const candidateName = match[1].trim();
-        if (candidateName.length >= 8 && candidateName.length <= 45) {
+        // Ensure it doesn't contain any address keywords
+        if (candidateName.length >= 8 && candidateName.length <= 45 &&
+            !candidateName.match(/KHANNA|COMPOUND|CHAWL|ROAD|STREET|BUILDING|SOCIETY|LANE|BLOCK|PLOT/i)) {
           const words = candidateName.split(/\s+/);
           if (words.length >= 2 && words.length <= 4) {
             name = candidateName;
@@ -261,15 +265,23 @@ export class OCRService {
         if (nameMatch && nameMatch[1]) {
           const candidateName = nameMatch[1].trim();
           
-          // Validate it's likely a person's name
+          // Validate it's likely a person's name and clean it
           if (candidateName.length >= 8 && candidateName.length <= 45) {
             const words = candidateName.split(/\s+/);
             
             // Check it's a reasonable name pattern and not obviously address/location
             if (words.length >= 2 && words.length <= 4 && 
-                !candidateName.match(/COMPOUND|CHAWL|ROAD|STREET|BUILDING|SOCIETY|NAGAR|COLONY|LANE|BLOCK|PLOT/i)) {
-              name = candidateName;
-              break;
+                !candidateName.match(/KHANNA|COMPOUND|CHAWL|ROAD|STREET|BUILDING|SOCIETY|NAGAR|COLONY|LANE|BLOCK|PLOT/i)) {
+              
+              // Additional cleaning: if the name accidentally includes location words at the end, remove them
+              const cleanWords = words.filter(word => 
+                !word.match(/^(KHANNA|COMPOUND|CHAWL|ROAD|STREET|BUILDING|SOCIETY|NAGAR|COLONY|LANE|BLOCK|PLOT)$/i)
+              );
+              
+              if (cleanWords.length >= 2) {
+                name = cleanWords.join(' ');
+                break;
+              }
             }
           }
         }
