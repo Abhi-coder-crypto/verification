@@ -1,0 +1,129 @@
+I only want to process UIDAI Aadhaar card PDFs in the browser (no images). Please:
+
+Reject all non-PDF files.
+
+Remove all Tesseract.js OCR logic.
+
+Use pdfjs-dist (PDF.js) for text extraction, since pdf-parse does not work in browsers.
+
+Extract all text from the PDF and then pass it to my extractAadharInfo function.
+
+Return Aadhaar details (name, dob, gender, aadhaar number) in the OCRResponse.
+
+Here’s the TypeScript class to update:
+
+import * as pdfjsLib from "pdfjs-dist";
+
+export interface AadharData {
+  name: string;
+  dob: string;
+  aadhar: string;
+  gender: string;
+}
+
+export interface OCRResponse {
+  success: boolean;
+  data?: AadharData;
+  error?: string;
+}
+
+export class OCRService {
+  private static instance: OCRService;
+
+  private constructor() {}
+
+  public static getInstance(): OCRService {
+    if (!OCRService.instance) {
+      OCRService.instance = new OCRService();
+    }
+    return OCRService.instance;
+  }
+
+  public async processAadharDocument(file: File): Promise<OCRResponse> {
+    try {
+      if (file.type !== "application/pdf") {
+        return {
+          success: false,
+          error: "Only PDF Aadhaar files are supported."
+        };
+      }
+
+      // Extract text from PDF
+      const extractedText = await this.processPDF(file);
+
+      // Parse Aadhaar info
+      const aadharData = this.extractAadharInfo(extractedText);
+      if (aadharData) {
+        return { success: true, data: aadharData };
+      }
+
+      return {
+        success: false,
+        error: "Could not extract Aadhaar details. Please upload a valid UIDAI PDF."
+      };
+    } catch (err) {
+      console.error("PDF processing error:", err);
+      return {
+        success: false,
+        error: "Failed to process Aadhaar PDF. Please try again."
+      };
+    }
+  }
+
+  private async processPDF(file: File): Promise<string> {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    let extractedText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items
+        .map((item: any) => ("str" in item ? item.str : ""))
+        .filter((s: string) => s.trim().length > 0);
+      extractedText += strings.join(" ") + "\n";
+    }
+
+    return extractedText.trim();
+  }
+
+  // ✅ Aadhaar info parser (simplified version)
+  private extractAadharInfo(text: string): AadharData | null {
+    const aadharMatch = text.match(/\b\d{4}\s\d{4}\s\d{4}\b/);
+    const dobMatch = text.match(/(\d{2}\/\d{2}\/\d{4})/);
+    const genderMatch = text.match(/male|female/i);
+    const nameMatch = text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/);
+
+    if (!aadharMatch || !dobMatch || !genderMatch || !nameMatch) return null;
+
+    return {
+      name: nameMatch[1],
+      dob: dobMatch[1],
+      aadhar: aadharMatch[0].replace(/\s/g, ""),
+      gender: genderMatch[0].toLowerCase() === "male" ? "Male" : "Female"
+    };
+  }
+}
+
+export const ocrService = OCRService.getInstance();
+
+
+✅ With this setup in Replit:
+
+Run npm install pdfjs-dist
+
+Upload a UIDAI Aadhaar PDF
+
+It will extract and return details like:
+
+Name → Aniket Sanjay Rane
+
+DOB → 23/03/2001
+
+Gender → Male
+
+Aadhaar → 401593292039
