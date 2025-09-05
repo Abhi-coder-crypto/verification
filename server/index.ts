@@ -56,7 +56,7 @@ app.use((req, res, next) => {
   }
 
   // ✅ Render assigns a port dynamically — must use 0.0.0.0
-  const PORT = process.env.PORT || 5000;
+  const PORT = process.env.PORT || 3000;
   server.listen(Number(PORT), "0.0.0.0", () => {
     log(`🚀 Server running on port ${PORT}`);
   });
